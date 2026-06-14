@@ -322,8 +322,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     if (error) {
-      console.error(error);
-      showToast("Unable to send login link.", "error");
+      console.error("Supabase login link error:", error);
+      showToast(error.message || "Unable to send login link.", "error");
       return;
     }
 
