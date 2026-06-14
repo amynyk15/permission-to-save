@@ -1,0 +1,2048 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Permission to Save</title>
+
+    <link rel="stylesheet" href="style.css" />
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  </head>
+
+  <body>
+    <div class="app">
+      <!-- HEADER -->
+      <header class="header">
+        <div class="brand">
+          <div class="brand-icon">
+            <i data-lucide="wallet"></i>
+          </div>
+
+          <div>
+            <h1>Permission to Save</h1>
+            <p>My Personal Finance Dashboard</p>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button class="mobile-menu-btn" id="mobileMenuBtn" type="button">
+            <i data-lucide="menu"></i>
+            <span>Menu</span>
+          </button>
+
+          <button class="dashboard-pill" id="goToDashboardBtn" type="button">
+            <i data-lucide="star"></i>
+            Monthly Dashboard
+          </button>
+
+          <button class="theme-toggle-btn" id="themeToggleBtn" type="button">
+            <i data-lucide="moon"></i>
+            <span id="themeToggleText">Dark Mode</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="layout">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+          <nav class="menu-section">
+            <p class="menu-title">NAVIGATION</p>
+
+            <a href="#" class="menu-item active" data-target="dashboard">
+              <i data-lucide="home"></i>
+              Dashboard
+            </a>
+
+            <a href="#" class="menu-item" data-target="transactions">
+              <i data-lucide="receipt-text"></i>
+              Transactions
+            </a>
+
+            <a href="#" class="menu-item" data-target="monthly-snapshot">
+              <i data-lucide="calendar-days"></i>
+              Monthly Snapshot
+            </a>
+
+            <a href="#" class="menu-item" data-target="budget-planner">
+              <i data-lucide="clipboard-list"></i>
+              Budget Planner
+            </a>
+
+            <a href="#" class="menu-item" data-target="saving-goals">
+              <i data-lucide="target"></i>
+              Saving Goals
+            </a>
+
+            <a href="#" class="menu-item" data-target="subscription-tracking">
+              <i data-lucide="credit-card"></i>
+              Subscription Tracking
+            </a>
+
+            <a href="#" class="menu-item" data-target="settings">
+              <i data-lucide="settings"></i>
+              Settings
+            </a>
+          </nav>
+
+          <nav class="menu-section advanced">
+            <p class="menu-title">ADVANCED</p>
+
+            <a href="#" class="menu-item" data-target="investment-tracking">
+              <i data-lucide="chart-no-axes-column-increasing"></i>
+              Investment Tracking
+            </a>
+
+            <a href="#" class="menu-item" data-target="net-worth-tracking">
+              <i data-lucide="pie-chart"></i>
+              Net Worth Tracking
+            </a>
+
+            <a href="#" class="menu-item" data-target="analytics">
+              <i data-lucide="bar-chart-3"></i>
+              Analytics
+            </a>
+          </nav>
+
+          <!-- THIS MONTH WIDGET -->
+          <section class="this-month-widget">
+            <p class="widget-title">THIS MONTH</p>
+
+            <div class="month-row">
+              <i data-lucide="calendar"></i>
+              <strong id="thisMonthLabel">2026-05</strong>
+            </div>
+
+            <div class="summary-list">
+              <div class="summary-row">
+                <span>Income</span>
+                <strong class="green" id="thisMonthIncome">HK$15,000</strong>
+              </div>
+
+              <div class="summary-row">
+                <span>Expense</span>
+                <strong class="red" id="thisMonthExpense">HK$1,371</strong>
+              </div>
+
+              <div class="summary-row">
+                <span>Saving</span>
+                <strong class="green" id="thisMonthSaving">HK$3,000</strong>
+              </div>
+
+              <div class="summary-row">
+                <span>Investment</span>
+                <strong class="blue" id="thisMonthInvestment">HK$2,340</strong>
+              </div>
+
+              <div class="summary-row total">
+                <span>Net Cash Flow</span>
+                <strong class="purple" id="thisMonthNetCashFlow"
+                  >HK$8,289</strong
+                >
+              </div>
+            </div>
+          </section>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+          <div class="current-page-bar">
+            <span>Current Page</span>
+            <strong id="currentPageLabel">Dashboard</strong>
+          </div>
+          <!-- DASHBOARD PAGE -->
+          <section id="dashboard" class="page-section is-active">
+            <section class="welcome-row dashboard-welcome-row">
+              <h2>Welcome back! 👋</h2>
+
+              <div class="global-month-control">
+                <label for="globalSelectedMonth">Selected Month</label>
+                <select id="globalSelectedMonth"></select>
+
+                <button
+                  class="month-add-btn"
+                  id="addPlanningMonthBtn"
+                  type="button"
+                >
+                  <i data-lucide="plus"></i>
+                  Add Month
+                </button>
+              </div>
+            </section>
+
+            <!-- KPI CARDS -->
+            <section class="kpi-grid">
+              <article class="kpi-card">
+                <div class="kpi-icon green-bg">
+                  <i data-lucide="dollar-sign"></i>
+                </div>
+                <p>MONTHLY INCOME</p>
+                <h3 id="dashboardIncome">HK$0</h3>
+                <span
+                  class="kpi-comparison comparison-neutral"
+                  id="dashboardIncomeCompare"
+                >
+                  No previous data
+                </span>
+              </article>
+
+              <article class="kpi-card">
+                <div class="kpi-icon red-bg">
+                  <i data-lucide="minus"></i>
+                </div>
+                <p>MONTHLY EXPENSE</p>
+                <h3 id="dashboardExpense">HK$0</h3>
+                <span
+                  class="kpi-comparison comparison-neutral"
+                  id="dashboardExpenseCompare"
+                >
+                  No previous data
+                </span>
+              </article>
+
+              <article class="kpi-card">
+                <div class="kpi-icon green-bg">
+                  <i data-lucide="piggy-bank"></i>
+                </div>
+                <p>SAVING</p>
+                <h3 id="dashboardSaving">HK$0</h3>
+                <span
+                  class="kpi-comparison comparison-neutral"
+                  id="dashboardSavingCompare"
+                >
+                  No previous data
+                </span>
+              </article>
+
+              <article class="kpi-card">
+                <div class="kpi-icon purple-bg">
+                  <i data-lucide="trending-up"></i>
+                </div>
+                <p>INVESTMENT</p>
+                <h3 id="dashboardInvestment">HK$0</h3>
+                <span
+                  class="kpi-comparison comparison-neutral"
+                  id="dashboardInvestmentCompare"
+                >
+                  No previous data
+                </span>
+              </article>
+
+              <article class="kpi-card">
+                <div class="kpi-icon blue-bg">
+                  <i data-lucide="wallet-cards"></i>
+                </div>
+                <p>NET CASH FLOW</p>
+                <h3 id="dashboardNetCashFlow">HK$0</h3>
+                <span
+                  class="kpi-comparison comparison-neutral"
+                  id="dashboardNetCashFlowCompare"
+                >
+                  No previous data
+                </span>
+              </article>
+
+              <article class="kpi-card">
+                <div class="kpi-icon purple-bg">
+                  <i data-lucide="percent"></i>
+                </div>
+                <p>SAVING RATE</p>
+                <h3 id="dashboardSavingRate">0%</h3>
+                <span
+                  class="kpi-comparison comparison-neutral"
+                  id="dashboardSavingRateCompare"
+                >
+                  No previous data
+                </span>
+              </article>
+            </section>
+
+            <!-- DASHBOARD NET WORTH SUMMARY -->
+            <section class="card dashboard-networth-card">
+              <div class="card-header">
+                <div>
+                  <h3>Net Worth Summary</h3>
+                  <p class="section-note">
+                    Overview of your assets and liabilities.
+                  </p>
+                </div>
+
+                <button class="text-btn" id="goToNetWorthBtn" type="button">
+                  View details
+                </button>
+              </div>
+
+              <div class="dashboard-networth-grid">
+                <div class="dashboard-networth-item">
+                  <p>Total Assets</p>
+                  <strong class="green" id="dashboardNetWorthAssets"
+                    >HK$0</strong
+                  >
+                </div>
+
+                <div class="dashboard-networth-item">
+                  <p>Total Liabilities</p>
+                  <strong class="red" id="dashboardNetWorthLiabilities"
+                    >HK$0</strong
+                  >
+                </div>
+
+                <div class="dashboard-networth-item highlight">
+                  <p>Net Worth</p>
+                  <strong class="purple" id="dashboardNetWorthValue"
+                    >HK$0</strong
+                  >
+                </div>
+              </div>
+            </section>
+
+            <!-- DASHBOARD INVESTMENT SUMMARY -->
+            <section class="card dashboard-investment-card">
+              <div class="card-header">
+                <div>
+                  <h3>Investment Summary</h3>
+                  <p class="section-note">
+                    Overview of your investment cost, value and return.
+                  </p>
+                </div>
+
+                <button class="text-btn" id="goToInvestmentBtn" type="button">
+                  View details
+                </button>
+              </div>
+
+              <div class="dashboard-investment-grid">
+                <div class="dashboard-investment-item">
+                  <p>Total Cost</p>
+                  <strong class="blue" id="dashboardInvestmentCost"
+                    >HK$0</strong
+                  >
+                </div>
+
+                <div class="dashboard-investment-item">
+                  <p>Current Value</p>
+                  <strong class="purple" id="dashboardInvestmentValue"
+                    >HK$0</strong
+                  >
+                </div>
+
+                <div class="dashboard-investment-item">
+                  <p>Gain / Loss</p>
+                  <strong class="green" id="dashboardInvestmentGainLoss"
+                    >HK$0</strong
+                  >
+                </div>
+
+                <div class="dashboard-investment-item highlight">
+                  <p>Return Rate</p>
+                  <strong class="green" id="dashboardInvestmentReturnRate"
+                    >0%</strong
+                  >
+                </div>
+              </div>
+            </section>
+
+            <!-- CONTENT GRID -->
+            <section class="dashboard-grid">
+              <!-- MONEY FLOW -->
+              <article class="card money-flow">
+                <div class="card-header">
+                  <div>
+                    <h3>Money Flow</h3>
+                    <div class="legend">
+                      <span><i class="dot income"></i> Income</span>
+                      <span><i class="dot expense"></i> Expense</span>
+                    </div>
+                  </div>
+
+                  <div class="segmented" id="moneyFlowSegmented">
+                    <button type="button" data-flow-view="daily">Daily</button>
+                    <button
+                      type="button"
+                      data-flow-view="monthly"
+                      class="selected"
+                    >
+                      Monthly
+                    </button>
+                    <button type="button" data-flow-view="yearly">
+                      Yearly
+                    </button>
+                  </div>
+                </div>
+
+                <div class="bar-chart">
+                  <div class="y-axis" id="moneyFlowYAxis">
+                    <span>HK$20k</span>
+                    <span>HK$15k</span>
+                    <span>HK$10k</span>
+                    <span>HK$5k</span>
+                    <span>HK$0</span>
+                  </div>
+
+                  <div class="bars" id="moneyFlowBars">
+                    <!-- JavaScript will render money flow bars here -->
+                  </div>
+                </div>
+              </article>
+
+              <!-- SAVING GOALS -->
+              <article class="card saving-goals">
+                <div class="card-header">
+                  <h3>Saving Goals</h3>
+
+                  <button
+                    class="text-btn"
+                    id="goToSavingGoalsBtn"
+                    type="button"
+                  >
+                    View all
+                  </button>
+                </div>
+
+                <div id="dashboardSavingGoalsList">
+                  <!-- JavaScript will render dashboard saving goals here -->
+                </div>
+              </article>
+
+              <!-- RECENT TRANSACTIONS -->
+              <article class="card table-card">
+                <div class="card-header">
+                  <h3>Recent Transactions</h3>
+                  <button
+                    class="text-btn"
+                    id="goToTransactionsBtn"
+                    type="button"
+                  >
+                    View all
+                  </button>
+                </div>
+
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Name</th>
+                      <th>Category</th>
+                      <th>Account</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+
+                  <tbody id="dashboardRecentTransactionsBody">
+                    <tr>
+                      <td>29 May, 2026</td>
+                      <td>Salary</td>
+                      <td><span class="tag green-tag">Income</span></td>
+                      <td>Bank</td>
+                      <td><span class="status green-dot"></span>Completed</td>
+                    </tr>
+
+                    <tr>
+                      <td>28 May, 2026</td>
+                      <td>MTR Octopus</td>
+                      <td><span class="tag blue-tag">Transportation</span></td>
+                      <td>Octopus</td>
+                      <td><span class="status green-dot"></span>Completed</td>
+                    </tr>
+
+                    <tr>
+                      <td>27 May, 2026</td>
+                      <td>Groceries</td>
+                      <td><span class="tag yellow-tag">Food & Dining</span></td>
+                      <td>Credit Card</td>
+                      <td><span class="status green-dot"></span>Completed</td>
+                    </tr>
+
+                    <tr>
+                      <td>25 May, 2026</td>
+                      <td>Online Shopping</td>
+                      <td><span class="tag red-tag">Shopping</span></td>
+                      <td>Credit Card</td>
+                      <td><span class="status blue-dot"></span>Pending</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </article>
+
+              <!-- SUBSCRIPTION -->
+              <article class="card subscription-card">
+                <div class="card-header">
+                  <h3>Subscription Tracking</h3>
+
+                  <button
+                    class="text-btn"
+                    id="goToSubscriptionsBtn"
+                    type="button"
+                  >
+                    View all
+                  </button>
+                </div>
+
+                <div id="dashboardSubscriptionList">
+                  <!-- JavaScript will render dashboard subscriptions here -->
+                </div>
+              </article>
+
+              <!-- TOP SPENDING CATEGORIES -->
+              <article class="card budget-card">
+                <div class="card-header">
+                  <div>
+                    <h3>Top Spending Categories</h3>
+                    <p class="section-note">
+                      Completed expenses in the latest month.
+                    </p>
+                  </div>
+
+                  <button class="text-btn" id="goToAnalyticsBtn" type="button">
+                    View analytics
+                  </button>
+                </div>
+
+                <div id="topSpendingList">
+                  <!-- JavaScript will render top spending categories here -->
+                </div>
+              </article>
+            </section>
+          </section>
+
+          <!-- TRANSACTIONS PAGE -->
+          <section id="transactions" class="page-section">
+            <div class="page-title page-title-row">
+              <div>
+                <h2>Transactions</h2>
+                <p>View and manage your income and expenses.</p>
+              </div>
+
+              <button class="primary-btn" id="openTransactionModal">
+                <i data-lucide="plus"></i>
+                Add Transaction
+              </button>
+            </div>
+
+            <section class="transaction-summary-grid">
+              <article class="mini-card">
+                <p>Total Income</p>
+                <h3 class="green" id="summaryIncome">HK$15,000</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Total Expense</p>
+                <h3 class="red" id="summaryExpense">HK$1,030</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Completed Records</p>
+                <h3 id="summaryCompleted">3</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Pending Records</p>
+                <h3 class="blue" id="summaryPending">1</h3>
+              </article>
+            </section>
+
+            <section class="card transaction-card">
+              <div class="transaction-toolbar">
+                <div class="search-box">
+                  <i data-lucide="search"></i>
+                  <input
+                    type="text"
+                    id="transactionSearch"
+                    placeholder="Search transactions..."
+                  />
+                </div>
+
+                <select id="categoryFilter">
+                  <option value="All Categories">All Categories</option>
+                  <option value="Salary">Salary</option>
+                  <option value="Food & Dining">Food & Dining</option>
+                  <option value="Transportation">Transportation</option>
+                  <option value="Shopping">Shopping</option>
+                  <option value="Subscription">Subscription</option>
+                  <option value="Investment">Investment</option>
+                </select>
+
+                <select id="typeFilter">
+                  <option value="All Types">All Types</option>
+                  <option value="Income">Income</option>
+                  <option value="Expense">Expense</option>
+                </select>
+
+                <select id="statusFilter">
+                  <option value="All Statuses">All Statuses</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Pending">Pending</option>
+                </select>
+
+                <select id="monthFilter">
+                  <option value="All Months">All Months</option>
+                </select>
+
+                <button
+                  class="clear-filter-btn"
+                  id="clearTransactionFiltersBtn"
+                  type="button"
+                >
+                  Clear Filters
+                </button>
+
+                <span
+                  class="transaction-filter-count"
+                  id="transactionFilterCount"
+                >
+                  Showing all transactions
+                </span>
+              </div>
+
+              <table class="transaction-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Type</th>
+                    <th>Category</th>
+                    <th>Account</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+
+                <tbody id="transactionTableBody">
+                  <tr
+                    data-type="Income"
+                    data-category="Salary"
+                    data-status="Completed"
+                    data-amount="15000"
+                  >
+                    <td>2026-05-29</td>
+                    <td>Salary</td>
+                    <td><span class="tag green-tag">Income</span></td>
+                    <td>Salary</td>
+                    <td>Bank</td>
+                    <td class="green">HK$15,000</td>
+                    <td><span class="status green-dot"></span>Completed</td>
+                  </tr>
+
+                  <tr
+                    data-type="Expense"
+                    data-category="Transportation"
+                    data-status="Completed"
+                    data-amount="120"
+                  >
+                    <td>2026-05-28</td>
+                    <td>MTR Octopus</td>
+                    <td><span class="tag red-tag">Expense</span></td>
+                    <td>Transportation</td>
+                    <td>Octopus</td>
+                    <td class="red">HK$120</td>
+                    <td><span class="status green-dot"></span>Completed</td>
+                  </tr>
+
+                  <tr
+                    data-type="Expense"
+                    data-category="Food & Dining"
+                    data-status="Completed"
+                    data-amount="350"
+                  >
+                    <td>2026-05-27</td>
+                    <td>Groceries</td>
+                    <td><span class="tag red-tag">Expense</span></td>
+                    <td>Food & Dining</td>
+                    <td>Credit Card</td>
+                    <td class="red">HK$350</td>
+                    <td><span class="status green-dot"></span>Completed</td>
+                  </tr>
+
+                  <tr
+                    data-type="Expense"
+                    data-category="Shopping"
+                    data-status="Pending"
+                    data-amount="560"
+                  >
+                    <td>2026-05-25</td>
+                    <td>Online Shopping</td>
+                    <td><span class="tag red-tag">Expense</span></td>
+                    <td>Shopping</td>
+                    <td>Credit Card</td>
+                    <td class="red">HK$560</td>
+                    <td><span class="status blue-dot"></span>Pending</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+
+            <!-- ADD TRANSACTION MODAL -->
+            <div class="modal-overlay" id="transactionModal">
+              <div class="modal-card">
+                <div class="modal-header">
+                  <div>
+                    <h3 id="transactionModalTitle">Add Transaction</h3>
+                    <p id="transactionModalText">
+                      Create a new income or expense record.
+                    </p>
+                  </div>
+
+                  <button
+                    class="icon-btn"
+                    id="closeTransactionModal"
+                    type="button"
+                  >
+                    <i data-lucide="x"></i>
+                  </button>
+                </div>
+
+                <form id="transactionForm">
+                  <div class="form-grid">
+                    <div class="form-field">
+                      <label for="transactionDate">Date</label>
+                      <input type="date" id="transactionDate" required />
+                    </div>
+
+                    <div class="form-field">
+                      <label for="transactionType">Type</label>
+                      <select id="transactionType" required>
+                        <option value="Income">Income</option>
+                        <option value="Expense">Expense</option>
+                      </select>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="transactionDescription">Description</label>
+                      <input
+                        type="text"
+                        id="transactionDescription"
+                        placeholder="e.g. Coffee, Salary"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-field">
+                      <label for="transactionCategory">Category</label>
+                      <select id="transactionCategory" required>
+                        <option value="Salary">Salary</option>
+                        <option value="Food & Dining">Food & Dining</option>
+                        <option value="Transportation">Transportation</option>
+                        <option value="Shopping">Shopping</option>
+                        <option value="Subscription">Subscription</option>
+                        <option value="Investment">Investment</option>
+                      </select>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="transactionAccount">Account</label>
+                      <select id="transactionAccount" required>
+                        <option value="Bank">Bank</option>
+                        <option value="Credit Card">Credit Card</option>
+                        <option value="Octopus">Octopus</option>
+                        <option value="Cash">Cash</option>
+                      </select>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="transactionAmount">Amount</label>
+                      <input
+                        type="number"
+                        id="transactionAmount"
+                        placeholder="0"
+                        min="0"
+                        step="0.01"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-field full-width">
+                      <label for="transactionStatus">Status</label>
+                      <select id="transactionStatus" required>
+                        <option value="Completed">Completed</option>
+                        <option value="Pending">Pending</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="modal-actions">
+                    <button
+                      type="button"
+                      class="secondary-btn"
+                      id="cancelTransactionModal"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="submit"
+                      class="primary-btn"
+                      id="transactionSubmitBtn"
+                    >
+                      Save Transaction
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </section>
+
+          <!-- MONTHLY SNAPSHOT PAGE -->
+          <section id="monthly-snapshot" class="page-section">
+            <div class="page-title page-title-row">
+              <div>
+                <h2>Monthly Snapshot</h2>
+                <p>
+                  Monthly overview of income, expense, saving and investment.
+                </p>
+              </div>
+
+              <select class="month-select" id="monthlySnapshotMonth">
+                <option value="2026-05">2026-05</option>
+              </select>
+            </div>
+
+            <section class="snapshot-grid">
+              <article class="mini-card">
+                <p>Monthly Income</p>
+                <h3 class="green" id="snapshotIncome">HK$0</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Monthly Expense</p>
+                <h3 class="red" id="snapshotExpense">HK$0</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Monthly Investment</p>
+                <h3 class="blue" id="snapshotInvestment">HK$0</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Saving</p>
+                <h3 class="green" id="snapshotSaving">HK$0</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Net Cash Flow</p>
+                <h3 class="purple" id="snapshotNetCashFlow">HK$0</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Saving Rate</p>
+                <h3 id="snapshotSavingRate">0%</h3>
+              </article>
+            </section>
+
+            <section class="card snapshot-card">
+              <div class="card-header">
+                <h3>Monthly Summary</h3>
+                <p class="section-note">
+                  Only completed transactions are included in this snapshot.
+                </p>
+              </div>
+
+              <table class="snapshot-table">
+                <thead>
+                  <tr>
+                    <th>Month</th>
+                    <th>Income</th>
+                    <th>Expense</th>
+                    <th>Investment</th>
+                    <th>Saving</th>
+                    <th>Net Cash Flow</th>
+                    <th>Saving Rate</th>
+                  </tr>
+                </thead>
+
+                <tbody id="monthlySnapshotTableBody">
+                  <!-- JavaScript will render monthly data here -->
+                </tbody>
+              </table>
+            </section>
+          </section>
+
+          <!-- BUDGET PLANNER PAGE -->
+          <section id="budget-planner" class="page-section">
+            <div class="page-title page-title-row">
+              <div>
+                <h2>Budget Planner</h2>
+                <p>
+                  Plan your monthly spending and compare it with actual
+                  expenses.
+                </p>
+              </div>
+
+              <div class="budget-actions">
+                <select class="month-select" id="budgetPlannerMonth">
+                  <option value="2026-05">2026-05</option>
+                </select>
+
+                <button
+                  class="copy-budget-btn"
+                  id="copyPreviousBudgetBtn"
+                  type="button"
+                >
+                  Copy Previous Month Budget
+                </button>
+
+                <button class="primary-btn" id="saveBudgetBtn" type="button">
+                  <i data-lucide="save"></i>
+                  Save Budgets
+                </button>
+              </div>
+            </div>
+
+            <section class="budget-summary-grid">
+              <article class="mini-card">
+                <p>Total Planned</p>
+                <h3 class="purple" id="budgetTotalPlanned">HK$0</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Actual Spending</p>
+                <h3 class="red" id="budgetTotalActual">HK$0</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Remaining Budget</p>
+                <h3 class="green" id="budgetRemaining">HK$0</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Over Budget Categories</p>
+                <h3 class="red" id="budgetOverCount">0</h3>
+              </article>
+            </section>
+
+            <section class="card budget-planner-card">
+              <div class="card-header">
+                <h3>Category Budget</h3>
+                <p class="section-note">
+                  Actual spending is calculated from completed expense
+                  transactions only.
+                </p>
+              </div>
+
+              <table class="budget-planner-table">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Planned Budget</th>
+                    <th>Actual Spending</th>
+                    <th>Remaining / Over</th>
+                    <th>Usage</th>
+                  </tr>
+                </thead>
+
+                <tbody id="budgetPlannerTableBody">
+                  <!-- JavaScript will render budget rows here -->
+                </tbody>
+              </table>
+            </section>
+          </section>
+
+          <!-- SAVING GOALS PAGE -->
+          <section id="saving-goals" class="page-section">
+            <div class="page-title page-title-row">
+              <div>
+                <h2>Saving Goals</h2>
+                <p>Track your saving progress and financial goals.</p>
+              </div>
+
+              <button
+                class="primary-btn"
+                id="openSavingGoalModal"
+                type="button"
+              >
+                <i data-lucide="plus"></i>
+                Add Goal
+              </button>
+            </div>
+
+            <section class="saving-goals-summary-grid">
+              <article class="mini-card">
+                <p>Total Target</p>
+                <h3 class="purple" id="goalsTotalTarget">HK$0</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Total Saved</p>
+                <h3 class="green" id="goalsTotalSaved">HK$0</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Remaining</p>
+                <h3 class="red" id="goalsTotalRemaining">HK$0</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Overall Progress</p>
+                <h3 class="blue" id="goalsOverallProgress">0%</h3>
+              </article>
+            </section>
+
+            <section class="saving-goals-list" id="savingGoalsList">
+              <!-- JavaScript will render saving goal cards here -->
+            </section>
+
+            <!-- SAVING GOAL MODAL -->
+            <div class="modal-overlay" id="savingGoalModal">
+              <div class="modal-card">
+                <div class="modal-header">
+                  <div>
+                    <h3 id="savingGoalModalTitle">Add Saving Goal</h3>
+                    <p>Create or update your financial goal.</p>
+                  </div>
+
+                  <button
+                    class="icon-btn"
+                    id="closeSavingGoalModal"
+                    type="button"
+                  >
+                    <i data-lucide="x"></i>
+                  </button>
+                </div>
+
+                <form id="savingGoalForm">
+                  <div class="form-grid">
+                    <div class="form-field">
+                      <label for="goalName">Goal Name</label>
+                      <input
+                        type="text"
+                        id="goalName"
+                        placeholder="e.g. Emergency Fund"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-field">
+                      <label for="goalStatus">Status</label>
+                      <select id="goalStatus" required>
+                        <option value="Active">Active</option>
+                        <option value="Paused">Paused</option>
+                        <option value="Completed">Completed</option>
+                      </select>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="goalTarget">Target Amount</label>
+                      <input
+                        type="number"
+                        id="goalTarget"
+                        min="0"
+                        step="1"
+                        placeholder="50000"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-field">
+                      <label for="goalCurrent">Current Amount</label>
+                      <input
+                        type="number"
+                        id="goalCurrent"
+                        min="0"
+                        step="1"
+                        placeholder="0"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-field full-width">
+                      <label for="goalDeadline">Deadline</label>
+                      <input type="date" id="goalDeadline" required />
+                    </div>
+                  </div>
+
+                  <div class="modal-actions">
+                    <button
+                      type="button"
+                      class="secondary-btn"
+                      id="cancelSavingGoalModal"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="submit"
+                      class="primary-btn"
+                      id="savingGoalSubmitBtn"
+                    >
+                      Save Goal
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </section>
+
+          <!-- SUBSCRIPTION TRACKING PAGE -->
+          <section id="subscription-tracking" class="page-section">
+            <div class="page-title page-title-row">
+              <div>
+                <h2>Subscription Tracking</h2>
+                <p>
+                  Manage recurring payments and upcoming subscription renewals.
+                </p>
+              </div>
+
+              <button
+                class="primary-btn"
+                id="openSubscriptionModal"
+                type="button"
+              >
+                <i data-lucide="plus"></i>
+                Add Subscription
+              </button>
+            </div>
+
+            <section class="subscription-summary-grid">
+              <article class="mini-card">
+                <p>Monthly Total</p>
+                <h3 class="red" id="subscriptionMonthlyTotal">HK$0</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Active Subscriptions</p>
+                <h3 class="purple" id="subscriptionActiveCount">0</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Upcoming This Month</p>
+                <h3 class="blue" id="subscriptionUpcomingCount">0</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Yearly Estimate</p>
+                <h3 class="red" id="subscriptionYearlyEstimate">HK$0</h3>
+              </article>
+            </section>
+
+            <section class="card subscription-page-card">
+              <div class="card-header">
+                <h3>Subscription List</h3>
+                <p class="section-note">
+                  Active monthly subscriptions are included in the monthly
+                  total.
+                </p>
+              </div>
+
+              <table class="subscription-table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Plan</th>
+                    <th>Fee</th>
+                    <th>Cycle</th>
+                    <th>Next Payment Date</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+
+                <tbody id="subscriptionTableBody">
+                  <!-- JavaScript will render subscription rows here -->
+                </tbody>
+              </table>
+            </section>
+
+            <!-- SUBSCRIPTION MODAL -->
+            <div class="modal-overlay" id="subscriptionModal">
+              <div class="modal-card">
+                <div class="modal-header">
+                  <div>
+                    <h3 id="subscriptionModalTitle">Add Subscription</h3>
+                    <p>Create or update your recurring payment record.</p>
+                  </div>
+
+                  <button
+                    class="icon-btn"
+                    id="closeSubscriptionModal"
+                    type="button"
+                  >
+                    <i data-lucide="x"></i>
+                  </button>
+                </div>
+
+                <form id="subscriptionForm">
+                  <div class="form-grid">
+                    <div class="form-field">
+                      <label for="subscriptionItem">Item</label>
+                      <input
+                        type="text"
+                        id="subscriptionItem"
+                        placeholder="e.g. Netflix"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-field">
+                      <label for="subscriptionPlan">Plan</label>
+                      <input
+                        type="text"
+                        id="subscriptionPlan"
+                        placeholder="e.g. Premium"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-field">
+                      <label for="subscriptionFee">Fee</label>
+                      <input
+                        type="number"
+                        id="subscriptionFee"
+                        min="0"
+                        step="0.01"
+                        placeholder="79"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-field">
+                      <label for="subscriptionCycle">Cycle</label>
+                      <select id="subscriptionCycle" required>
+                        <option value="Monthly">Monthly</option>
+                        <option value="Yearly">Yearly</option>
+                      </select>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="subscriptionNextDate"
+                        >Next Payment Date</label
+                      >
+                      <input type="date" id="subscriptionNextDate" required />
+                    </div>
+
+                    <div class="form-field">
+                      <label for="subscriptionStatus">Status</label>
+                      <select id="subscriptionStatus" required>
+                        <option value="Active">Active</option>
+                        <option value="Paused">Paused</option>
+                        <option value="Cancelled">Cancelled</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="modal-actions">
+                    <button
+                      type="button"
+                      class="secondary-btn"
+                      id="cancelSubscriptionModal"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="submit"
+                      class="primary-btn"
+                      id="subscriptionSubmitBtn"
+                    >
+                      Save Subscription
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </section>
+
+          <!-- SETTINGS PAGE -->
+          <section id="settings" class="page-section">
+            <div class="page-title">
+              <h2>Settings</h2>
+              <p>Manage categories, accounts and dashboard preferences.</p>
+            </div>
+
+            <section class="card cloud-account-card">
+              <div class="card-header">
+                <div>
+                  <h3>Cloud Account</h3>
+                  <p class="section-note">
+                    Sign in to prepare cloud sync with Supabase.
+                  </p>
+                </div>
+              </div>
+
+              <div class="cloud-auth-box" id="cloudLoggedOutBox">
+                <label for="cloudEmailInput">Email Address</label>
+
+                <div class="cloud-auth-row">
+                  <input
+                    type="email"
+                    id="cloudEmailInput"
+                    placeholder="your@email.com"
+                  />
+
+                  <button
+                    class="primary-btn"
+                    id="sendLoginLinkBtn"
+                    type="button"
+                  >
+                    <i data-lucide="mail"></i>
+                    Send Login Link
+                  </button>
+                </div>
+
+                <p class="cloud-auth-note">
+                  Supabase will send a secure login link to your email.
+                </p>
+              </div>
+
+              <div
+                class="cloud-auth-box cloud-user-box hidden"
+                id="cloudLoggedInBox"
+              >
+                <p class="cloud-auth-label">Current User</p>
+
+                <div class="cloud-user-row">
+                  <strong id="cloudUserEmail">Not signed in</strong>
+
+                  <button
+                    class="secondary-btn"
+                    id="logoutCloudBtn"
+                    type="button"
+                  >
+                    <i data-lucide="log-out"></i>
+                    Logout
+                  </button>
+                </div>
+
+                <div class="cloud-sync-actions">
+                  <button
+                    class="primary-btn"
+                    id="uploadTransactionsCloudBtn"
+                    type="button"
+                  >
+                    <i data-lucide="cloud-upload"></i>
+                    Upload Transactions to Cloud
+                  </button>
+
+                  <button
+                    class="secondary-btn"
+                    id="loadTransactionsCloudBtn"
+                    type="button"
+                  >
+                    <i data-lucide="cloud-download"></i>
+                    Load Transactions from Cloud
+                  </button>
+
+                  <button
+                    class="primary-btn"
+                    id="uploadBudgetsCloudBtn"
+                    type="button"
+                  >
+                    <i data-lucide="cloud-upload"></i>
+                    Upload Budgets to Cloud
+                  </button>
+
+                  <button
+                    class="secondary-btn"
+                    id="loadBudgetsCloudBtn"
+                    type="button"
+                  >
+                    <i data-lucide="cloud-download"></i>
+                    Load Budgets from Cloud
+                  </button>
+
+                  <button
+                    class="primary-btn"
+                    id="uploadSavingGoalsCloudBtn"
+                    type="button"
+                  >
+                    <i data-lucide="cloud-upload"></i>
+                    Upload Saving Goals to Cloud
+                  </button>
+
+                  <button
+                    class="secondary-btn"
+                    id="loadSavingGoalsCloudBtn"
+                    type="button"
+                  >
+                    <i data-lucide="cloud-download"></i>
+                    Load Saving Goals from Cloud
+                  </button>
+
+                  <button
+                    class="primary-btn"
+                    id="uploadSubscriptionsCloudBtn"
+                    type="button"
+                  >
+                    <i data-lucide="cloud-upload"></i>
+                    Upload Subscriptions to Cloud
+                  </button>
+
+                  <button
+                    class="secondary-btn"
+                    id="loadSubscriptionsCloudBtn"
+                    type="button"
+                  >
+                    <i data-lucide="cloud-download"></i>
+                    Load Subscriptions from Cloud
+                  </button>
+
+                  <button
+                    class="primary-btn"
+                    id="uploadSettingsCloudBtn"
+                    type="button"
+                  >
+                    <i data-lucide="cloud-upload"></i>
+                    Upload Settings to Cloud
+                  </button>
+
+                  <button
+                    class="secondary-btn"
+                    id="loadSettingsCloudBtn"
+                    type="button"
+                  >
+                    <i data-lucide="cloud-download"></i>
+                    Load Settings from Cloud
+                  </button>
+
+                  <button
+                    class="primary-btn"
+                    id="uploadNetWorthCloudBtn"
+                    type="button"
+                  >
+                    <i data-lucide="cloud-upload"></i>
+                    Upload Net Worth to Cloud
+                  </button>
+
+                  <button
+                    class="secondary-btn"
+                    id="loadNetWorthCloudBtn"
+                    type="button"
+                  >
+                    <i data-lucide="cloud-download"></i>
+                    Load Net Worth from Cloud
+                  </button>
+
+                  <button
+                    class="primary-btn"
+                    id="uploadInvestmentsCloudBtn"
+                    type="button"
+                  >
+                    <i data-lucide="cloud-upload"></i>
+                    Upload Investments to Cloud
+                  </button>
+
+                  <button
+                    class="secondary-btn"
+                    id="loadInvestmentsCloudBtn"
+                    type="button"
+                  >
+                    <i data-lucide="cloud-download"></i>
+                    Load Investments from Cloud
+                  </button>
+
+                  <button
+                    class="primary-btn"
+                    id="uploadAllCloudBtn"
+                    type="button"
+                  >
+                    <i data-lucide="cloud-upload"></i>
+                    Upload All Data to Cloud
+                  </button>
+
+                  <button
+                    class="secondary-btn"
+                    id="loadAllCloudBtn"
+                    type="button"
+                  >
+                    <i data-lucide="cloud-download"></i>
+                    Load All Data from Cloud
+                  </button>
+                </div>
+
+                <p class="cloud-auth-note" id="cloudSyncStatus">
+                  Transactions cloud sync is manual for now.
+                </p>
+              </div>
+            </section>
+
+            <section class="settings-grid">
+              <!-- CATEGORY SETTINGS -->
+              <article class="card settings-card">
+                <div class="card-header">
+                  <div>
+                    <h3>Categories</h3>
+                    <p class="section-note">
+                      Manage income, expense and investment categories.
+                    </p>
+                  </div>
+                </div>
+
+                <form class="settings-form" id="categoryForm">
+                  <div class="form-field">
+                    <label for="categoryName">Category Name</label>
+                    <input
+                      type="text"
+                      id="categoryName"
+                      placeholder="e.g. Food & Dining"
+                      required
+                    />
+                  </div>
+
+                  <div class="form-field">
+                    <label for="categoryType">Type</label>
+                    <select id="categoryType" required>
+                      <option value="Income">Income</option>
+                      <option value="Expense">Expense</option>
+                      <option value="Investment">Investment</option>
+                    </select>
+                  </div>
+
+                  <button type="submit" class="primary-btn">
+                    <i data-lucide="plus"></i>
+                    Add Category
+                  </button>
+                </form>
+
+                <div class="settings-list" id="categoryList">
+                  <!-- JavaScript will render categories here -->
+                </div>
+              </article>
+
+              <!-- ACCOUNT SETTINGS -->
+              <article class="card settings-card">
+                <div class="card-header">
+                  <div>
+                    <h3>Accounts</h3>
+                    <p class="section-note">
+                      Manage your payment accounts and wallets.
+                    </p>
+                  </div>
+                </div>
+
+                <form class="settings-form" id="accountForm">
+                  <div class="form-field">
+                    <label for="accountName">Account Name</label>
+                    <input
+                      type="text"
+                      id="accountName"
+                      placeholder="e.g. Bank, Cash, Octopus"
+                      required
+                    />
+                  </div>
+
+                  <div class="form-field">
+                    <label for="accountType">Type</label>
+                    <select id="accountType" required>
+                      <option value="Bank">Bank</option>
+                      <option value="Credit Card">Credit Card</option>
+                      <option value="E-Wallet">E-Wallet</option>
+                      <option value="Cash">Cash</option>
+                    </select>
+                  </div>
+
+                  <button type="submit" class="primary-btn">
+                    <i data-lucide="plus"></i>
+                    Add Account
+                  </button>
+                </form>
+
+                <div class="settings-list" id="accountList">
+                  <!-- JavaScript will render accounts here -->
+                </div>
+              </article>
+            </section>
+
+            <!-- DATA BACKUP SETTINGS -->
+            <section class="card settings-backup-card">
+              <div class="card-header">
+                <div>
+                  <h3>Data Backup</h3>
+                  <p class="section-note">
+                    Export or import your local data. This is useful when moving
+                    to another browser or computer.
+                  </p>
+                </div>
+              </div>
+
+              <div class="backup-actions">
+                <button class="primary-btn" id="exportDataBtn" type="button">
+                  <i data-lucide="download"></i>
+                  Export Data
+                </button>
+
+                <button
+                  class="secondary-btn"
+                  id="exportTransactionsCsvBtn"
+                  type="button"
+                >
+                  <i data-lucide="file-spreadsheet"></i>
+                  Export Transactions CSV
+                </button>
+
+                <button
+                  class="secondary-btn"
+                  id="exportMonthlySnapshotCsvBtn"
+                  type="button"
+                >
+                  <i data-lucide="calendar-days"></i>
+                  Export Monthly Snapshot CSV
+                </button>
+
+                <button class="secondary-btn" id="importDataBtn" type="button">
+                  <i data-lucide="upload"></i>
+                  Import Data
+                </button>
+
+                <button class="danger-btn" id="resetDataBtn" type="button">
+                  <i data-lucide="rotate-ccw"></i>
+                  Reset All Data
+                </button>
+
+                <input
+                  type="file"
+                  id="importDataInput"
+                  accept="application/json"
+                  hidden
+                />
+              </div>
+
+              <p class="backup-note">
+                Importing a backup file or resetting all data will replace your
+                current saved data. Please export a backup before resetting.
+              </p>
+            </section>
+          </section>
+
+          <!-- INVESTMENT TRACKING PAGE -->
+          <section id="investment-tracking" class="page-section">
+            <div class="page-title page-title-row">
+              <div>
+                <h2>Investment Tracking</h2>
+                <p>Track investment cost, current value and performance.</p>
+              </div>
+
+              <button
+                class="primary-btn"
+                id="openInvestmentModal"
+                type="button"
+              >
+                <i data-lucide="plus"></i>
+                Add Investment
+              </button>
+            </div>
+
+            <section class="investment-summary-grid">
+              <article class="mini-card">
+                <p>Total Cost</p>
+                <h3 class="blue" id="investmentTotalCost">HK$0</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Current Value</p>
+                <h3 class="purple" id="investmentTotalValue">HK$0</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Gain / Loss</p>
+                <h3 class="green" id="investmentGainLoss">HK$0</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Return Rate</p>
+                <h3 class="green" id="investmentReturnRate">0%</h3>
+              </article>
+            </section>
+
+            <section class="card investment-card">
+              <div class="card-header">
+                <h3>Investment Portfolio</h3>
+                <p class="section-note">
+                  Enter cost and current value manually to track performance.
+                </p>
+              </div>
+
+              <table class="transaction-table investment-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Platform</th>
+                    <th>Cost</th>
+                    <th>Current Value</th>
+                    <th>Gain / Loss</th>
+                    <th>Return</th>
+                    <th>Updated Date</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+
+                <tbody id="investmentTableBody">
+                  <!-- JavaScript will render investments here -->
+                </tbody>
+              </table>
+            </section>
+
+            <!-- INVESTMENT MODAL -->
+            <div class="modal-overlay" id="investmentModal">
+              <div class="modal-card">
+                <div class="modal-header">
+                  <div>
+                    <h3 id="investmentModalTitle">Add Investment</h3>
+                    <p>Add or update an investment record.</p>
+                  </div>
+
+                  <button
+                    class="icon-btn"
+                    id="closeInvestmentModal"
+                    type="button"
+                  >
+                    <i data-lucide="x"></i>
+                  </button>
+                </div>
+
+                <form id="investmentForm">
+                  <div class="form-grid">
+                    <div class="form-field">
+                      <label for="investmentName">Investment Name</label>
+                      <input
+                        type="text"
+                        id="investmentName"
+                        placeholder="e.g. VOO ETF"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-field">
+                      <label for="investmentType">Type</label>
+                      <select id="investmentType" required>
+                        <option value="ETF">ETF</option>
+                        <option value="Stock">Stock</option>
+                        <option value="Fund">Fund</option>
+                        <option value="Bond">Bond</option>
+                        <option value="Cash">Cash</option>
+                        <option value="Others">Others</option>
+                      </select>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="investmentPlatform">Platform</label>
+                      <input
+                        type="text"
+                        id="investmentPlatform"
+                        placeholder="e.g. Bank / Broker / Platform"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-field">
+                      <label for="investmentCost">Cost</label>
+                      <input
+                        type="number"
+                        id="investmentCost"
+                        min="0"
+                        step="0.01"
+                        placeholder="10000"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-field">
+                      <label for="investmentValue">Current Value</label>
+                      <input
+                        type="number"
+                        id="investmentValue"
+                        min="0"
+                        step="0.01"
+                        placeholder="10500"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-field">
+                      <label for="investmentUpdatedDate">Updated Date</label>
+                      <input type="date" id="investmentUpdatedDate" required />
+                    </div>
+                  </div>
+
+                  <div class="modal-actions">
+                    <button
+                      type="button"
+                      class="secondary-btn"
+                      id="cancelInvestmentModal"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="submit"
+                      class="primary-btn"
+                      id="investmentSubmitBtn"
+                    >
+                      Save Investment
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </section>
+
+          <!-- NET WORTH TRACKING PAGE -->
+          <section id="net-worth-tracking" class="page-section">
+            <div class="page-title page-title-row">
+              <div>
+                <h2>Net Worth Tracking</h2>
+                <p>Review your assets, liabilities and overall net worth.</p>
+              </div>
+
+              <button class="primary-btn" id="openNetWorthModal" type="button">
+                <i data-lucide="plus"></i>
+                Add Item
+              </button>
+            </div>
+
+            <section class="networth-summary-grid">
+              <article class="mini-card">
+                <p>Total Assets</p>
+                <h3 class="green" id="netWorthTotalAssets">HK$0</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Total Liabilities</p>
+                <h3 class="red" id="netWorthTotalLiabilities">HK$0</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Net Worth</p>
+                <h3 class="purple" id="netWorthValue">HK$0</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Items</p>
+                <h3 class="blue" id="netWorthItemCount">0</h3>
+              </article>
+            </section>
+
+            <section class="card networth-card">
+              <div class="card-header">
+                <h3>Net Worth Items</h3>
+                <p class="section-note">
+                  Add assets and liabilities to calculate your net worth.
+                </p>
+              </div>
+
+              <table class="transaction-table networth-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Category</th>
+                    <th>Amount</th>
+                    <th>Updated Date</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+
+                <tbody id="netWorthTableBody">
+                  <!-- JavaScript will render net worth items here -->
+                </tbody>
+              </table>
+            </section>
+
+            <!-- NET WORTH MODAL -->
+            <div class="modal-overlay" id="netWorthModal">
+              <div class="modal-card">
+                <div class="modal-header">
+                  <div>
+                    <h3 id="netWorthModalTitle">Add Net Worth Item</h3>
+                    <p>Add an asset or liability record.</p>
+                  </div>
+
+                  <button
+                    class="icon-btn"
+                    id="closeNetWorthModal"
+                    type="button"
+                  >
+                    <i data-lucide="x"></i>
+                  </button>
+                </div>
+
+                <form id="netWorthForm">
+                  <div class="form-grid">
+                    <div class="form-field">
+                      <label for="netWorthName">Name</label>
+                      <input
+                        type="text"
+                        id="netWorthName"
+                        placeholder="e.g. Bank Savings"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-field">
+                      <label for="netWorthType">Type</label>
+                      <select id="netWorthType" required>
+                        <option value="Asset">Asset</option>
+                        <option value="Liability">Liability</option>
+                      </select>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="netWorthCategory">Category</label>
+                      <select id="netWorthCategory" required>
+                        <option value="Bank">Bank</option>
+                        <option value="Cash">Cash</option>
+                        <option value="Investment">Investment</option>
+                        <option value="Property">Property</option>
+                        <option value="Credit Card">Credit Card</option>
+                        <option value="Loan">Loan</option>
+                        <option value="Others">Others</option>
+                      </select>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="netWorthAmount">Amount</label>
+                      <input
+                        type="number"
+                        id="netWorthAmount"
+                        min="0"
+                        step="0.01"
+                        placeholder="10000"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-field">
+                      <label for="netWorthUpdatedDate">Updated Date</label>
+                      <input type="date" id="netWorthUpdatedDate" required />
+                    </div>
+                  </div>
+
+                  <div class="modal-actions">
+                    <button
+                      type="button"
+                      class="secondary-btn"
+                      id="cancelNetWorthModal"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="submit"
+                      class="primary-btn"
+                      id="netWorthSubmitBtn"
+                    >
+                      Save Item
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </section>
+
+          <!-- ANALYTICS PAGE -->
+          <section id="analytics" class="page-section">
+            <div class="page-title page-title-row">
+              <div>
+                <h2>Analytics</h2>
+                <p>
+                  Explore monthly financial insights, spending patterns and
+                  saving performance.
+                </p>
+              </div>
+
+              <select class="month-select" id="analyticsMonth">
+                <option value="2026-05">2026-05</option>
+              </select>
+            </div>
+
+            <section class="analytics-summary-grid">
+              <article class="mini-card">
+                <p>Best Saving Month</p>
+                <h3 class="green" id="analyticsBestSavingMonth">-</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Average Expense</p>
+                <h3 class="red" id="analyticsAverageExpense">HK$0</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Average Saving Rate</p>
+                <h3 class="purple" id="analyticsAverageSavingRate">0%</h3>
+              </article>
+
+              <article class="mini-card">
+                <p>Top Category</p>
+                <h3 class="blue" id="analyticsTopCategory">-</h3>
+              </article>
+            </section>
+
+            <section class="analytics-grid">
+              <article class="card analytics-card analytics-trend-card">
+                <div class="card-header">
+                  <div>
+                    <h3>Monthly Cash Flow Trend</h3>
+                    <p class="section-note">
+                      Income, expense and saving by month.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="analytics-legend">
+                  <span><i class="legend-dot income"></i>Income</span>
+                  <span><i class="legend-dot expense"></i>Expense</span>
+                  <span><i class="legend-dot saving"></i>Saving</span>
+                </div>
+
+                <div class="analytics-trend-bars" id="analyticsTrendBars">
+                  <!-- JavaScript will render trend bars here -->
+                </div>
+              </article>
+
+              <article class="card analytics-card">
+                <div class="card-header">
+                  <div>
+                    <h3>Category Breakdown</h3>
+                    <p class="section-note">
+                      Completed expenses in the selected month.
+                    </p>
+                  </div>
+                </div>
+
+                <div id="analyticsCategoryBreakdown">
+                  <!-- JavaScript will render category breakdown here -->
+                </div>
+              </article>
+            </section>
+
+            <section class="card analytics-table-card">
+              <div class="card-header">
+                <div>
+                  <h3>Monthly Performance</h3>
+                  <p class="section-note">
+                    Summary table generated from completed transactions.
+                  </p>
+                </div>
+              </div>
+
+              <table class="snapshot-table analytics-table">
+                <thead>
+                  <tr>
+                    <th>Month</th>
+                    <th>Income</th>
+                    <th>Expense</th>
+                    <th>Investment</th>
+                    <th>Saving</th>
+                    <th>Net Cash Flow</th>
+                    <th>Saving Rate</th>
+                  </tr>
+                </thead>
+
+                <tbody id="analyticsMonthlyTableBody">
+                  <!-- JavaScript will render analytics rows here -->
+                </tbody>
+              </table>
+            </section>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
