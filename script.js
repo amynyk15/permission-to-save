@@ -225,20 +225,61 @@ document.addEventListener("DOMContentLoaded", () => {
     const currentUrl = new URL(window.location.href);
     const authCode = currentUrl.searchParams.get("code");
 
-    if (!authCode) return;
+    let shouldCleanUrl = false;
 
-    const { error } =
-      await supabaseClient.auth.exchangeCodeForSession(authCode);
+    if (authCode) {
+      const { error } =
+        await supabaseClient.auth.exchangeCodeForSession(authCode);
+
+      if (error) {
+        console.error(error);
+        showToast("Unable to complete cloud login.", "error");
+        return;
+      }
+
+      shouldCleanUrl = true;
+    }
+
+    if (window.location.hash && window.location.hash.includes("access_token")) {
+      const hashParams = new URLSearchParams(window.location.hash.slice(1));
+
+      const accessToken = hashParams.get("access_token");
+      const refreshToken = hashParams.get("refresh_token");
+
+      if (accessToken && refreshToken) {
+        const { error } = await supabaseClient.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (error) {
+          console.error(error);
+          showToast("Unable to complete cloud login.", "error");
+          return;
+        }
+
+        shouldCleanUrl = true;
+      }
+    }
+
+    const { data, error } = await supabaseClient.auth.getSession();
 
     if (error) {
       console.error(error);
-      showToast("Unable to complete cloud login.", "error");
+      showToast("Unable to check cloud login session.", "error");
       return;
     }
 
-    window.history.replaceState({}, document.title, window.location.pathname);
+    currentCloudUser = data.session ? data.session.user : null;
+    updateCloudAuthUI();
 
-    showToast("Cloud login completed.", "success");
+    if (shouldCleanUrl) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    if (currentCloudUser) {
+      showToast("Cloud login completed.", "success");
+    }
   }
 
   async function loadCloudSession() {
