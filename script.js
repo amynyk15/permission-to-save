@@ -314,6 +314,13 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    const sendLoginButton = document.getElementById("sendLoginLinkBtn");
+
+    if (sendLoginButton) {
+      sendLoginButton.disabled = true;
+      sendLoginButton.textContent = "Please wait...";
+    }
+
     const { error } = await supabaseClient.auth.signInWithOtp({
       email,
       options: {
@@ -328,6 +335,20 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     showToast("Login link sent. Please check your email.", "success");
+
+    setTimeout(() => {
+      if (sendLoginButton) {
+        sendLoginButton.disabled = false;
+        sendLoginButton.innerHTML = `
+      <i data-lucide="mail"></i>
+      Send Login Link
+    `;
+
+        if (window.lucide) {
+          lucide.createIcons();
+        }
+      }
+    }, 60000);
   }
 
   async function logoutCloudAccount() {
