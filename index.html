@@ -578,6 +578,16 @@
                   <option value="Pending">Pending</option>
                 </select>
 
+                <select id="currencyFilter">
+                  <option value="All Currencies">All Currencies</option>
+                </select>
+
+                <select id="paymentMethodFilter">
+                  <option value="All Payment Methods">
+                    All Payment Methods
+                  </option>
+                </select>
+
                 <select id="monthFilter">
                   <option value="All Months">All Months</option>
                 </select>
@@ -697,7 +707,7 @@
                 </div>
 
                 <form id="transactionForm">
-                  <div class="form-grid">
+                  <div class="form-grid transaction-modal-grid">
                     <div class="form-field">
                       <label for="transactionDate">Date</label>
                       <input type="date" id="transactionDate" required />
@@ -744,23 +754,74 @@
                     </div>
 
                     <div class="form-field">
-                      <label for="transactionAmount">Amount</label>
+                      <label for="transactionPaymentMethod"
+                        >Payment Method</label
+                      >
+                      <select id="transactionPaymentMethod" required></select>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="transactionOriginalAmount"
+                        >Original Amount</label
+                      >
                       <input
                         type="number"
-                        id="transactionAmount"
-                        placeholder="0"
+                        id="transactionOriginalAmount"
                         min="0"
                         step="0.01"
+                        placeholder="e.g. 1000"
                         required
                       />
                     </div>
 
-                    <div class="form-field full-width">
+                    <div class="form-field">
+                      <label for="transactionCurrency">Currency</label>
+                      <select id="transactionCurrency" required>
+                        <select id="transactionCurrency" required></select>
+                      </select>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="transactionExchangeRate"
+                        >Exchange Rate to HKD</label
+                      >
+                      <input
+                        type="number"
+                        id="transactionExchangeRate"
+                        min="0"
+                        step="0.000001"
+                        value="1"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-field">
+                      <label for="transactionAmount">Amount HKD</label>
+                      <input
+                        type="number"
+                        id="transactionAmount"
+                        min="0"
+                        step="0.01"
+                        readonly
+                        required
+                      />
+                    </div>
+
+                    <div class="form-field">
                       <label for="transactionStatus">Status</label>
                       <select id="transactionStatus" required>
                         <option value="Completed">Completed</option>
                         <option value="Pending">Pending</option>
                       </select>
+                    </div>
+
+                    <div class="form-field notes-field">
+                      <label for="transactionNotes">Notes</label>
+                      <textarea
+                        id="transactionNotes"
+                        rows="3"
+                        placeholder="Optional notes, e.g. cashback, reimbursement, travel details..."
+                      ></textarea>
                     </div>
                   </div>
 
@@ -1187,13 +1248,44 @@
                     </div>
 
                     <div class="form-field">
-                      <label for="subscriptionFee">Fee</label>
+                      <label for="subscriptionOriginalFee">Original Fee</label>
+                      <input
+                        type="number"
+                        id="subscriptionOriginalFee"
+                        min="0"
+                        step="0.01"
+                        placeholder="e.g. 12.99"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-field">
+                      <label for="subscriptionCurrency">Currency</label>
+                      <select id="subscriptionCurrency" required></select>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="subscriptionExchangeRate"
+                        >Exchange Rate to HKD</label
+                      >
+                      <input
+                        type="number"
+                        id="subscriptionExchangeRate"
+                        min="0"
+                        step="0.000001"
+                        value="1"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-field">
+                      <label for="subscriptionFee">Fee HKD</label>
                       <input
                         type="number"
                         id="subscriptionFee"
                         min="0"
                         step="0.01"
-                        placeholder="79"
+                        readonly
                         required
                       />
                     </div>
@@ -1458,9 +1550,54 @@
               </div>
             </section>
 
-            <section class="settings-grid">
+            <div class="settings-toolbar" id="settingsToolbar">
+              <button
+                type="button"
+                class="settings-view-btn active"
+                data-settings-view="all"
+              >
+                All
+              </button>
+
+              <button
+                type="button"
+                class="settings-view-btn"
+                data-settings-view="categories"
+              >
+                Categories
+              </button>
+
+              <button
+                type="button"
+                class="settings-view-btn"
+                data-settings-view="accounts"
+              >
+                Accounts
+              </button>
+
+              <button
+                type="button"
+                class="settings-view-btn"
+                data-settings-view="payment-methods"
+              >
+                Payment Methods
+              </button>
+
+              <button
+                type="button"
+                class="settings-view-btn"
+                data-settings-view="currencies"
+              >
+                Currencies
+              </button>
+            </div>
+
+            <section class="settings-grid" id="settingsGrid">
               <!-- CATEGORY SETTINGS -->
-              <article class="card settings-card">
+              <article
+                class="card settings-card settings-panel is-visible"
+                data-settings-panel="categories"
+              >
                 <div class="card-header">
                   <div>
                     <h3>Categories</h3>
@@ -1502,7 +1639,10 @@
               </article>
 
               <!-- ACCOUNT SETTINGS -->
-              <article class="card settings-card">
+              <article
+                class="card settings-card settings-panel is-visible"
+                data-settings-panel="accounts"
+              >
                 <div class="card-header">
                   <div>
                     <h3>Accounts</h3>
@@ -1541,6 +1681,117 @@
 
                 <div class="settings-list" id="accountList">
                   <!-- JavaScript will render accounts here -->
+                </div>
+              </article>
+
+              <!-- PAYMENT METHOD SETTINGS -->
+              <article
+                class="card settings-card settings-panel is-visible"
+                data-settings-panel="payment-methods"
+              >
+                <div class="card-header">
+                  <div>
+                    <h3>Payment Methods</h3>
+                    <p class="section-note">
+                      Manage payment methods used in transactions.
+                    </p>
+                  </div>
+                </div>
+
+                <form class="settings-form" id="paymentMethodForm">
+                  <div class="form-field">
+                    <label for="paymentMethodName">Payment Method Name</label>
+                    <input
+                      type="text"
+                      id="paymentMethodName"
+                      placeholder="e.g. HSBC Credit Card, FPS, Octopus"
+                      required
+                    />
+                  </div>
+
+                  <div class="form-field">
+                    <label for="paymentMethodType">Type</label>
+                    <select id="paymentMethodType" required>
+                      <option value="Cash">Cash</option>
+                      <option value="Card">Card</option>
+                      <option value="E-Wallet">E-Wallet</option>
+                      <option value="Bank Transfer">Bank Transfer</option>
+                      <option value="Auto Payment">Auto Payment</option>
+                      <option value="Online Payment">Online Payment</option>
+                      <option value="Others">Others</option>
+                    </select>
+                  </div>
+
+                  <button type="submit" class="primary-btn">
+                    <i data-lucide="plus"></i>
+                    Add Method
+                  </button>
+                </form>
+
+                <div class="settings-list" id="paymentMethodList">
+                  <!-- JavaScript will render payment methods here -->
+                </div>
+              </article>
+
+              <!-- CURRENCY SETTINGS -->
+              <article
+                class="card settings-card settings-panel is-visible"
+                data-settings-panel="currencies"
+              >
+                <div class="card-header">
+                  <div>
+                    <h3>Currencies</h3>
+                    <p class="section-note">
+                      Manage currencies and default exchange rates to HKD.
+                    </p>
+                  </div>
+                </div>
+
+                <form
+                  class="settings-form currency-settings-form"
+                  id="currencyForm"
+                >
+                  <div class="form-field">
+                    <label for="currencyCode">Code</label>
+                    <input
+                      type="text"
+                      id="currencyCode"
+                      placeholder="e.g. USD"
+                      maxlength="3"
+                      required
+                    />
+                  </div>
+
+                  <div class="form-field">
+                    <label for="currencyName">Currency Name</label>
+                    <input
+                      type="text"
+                      id="currencyName"
+                      placeholder="e.g. US Dollar"
+                      required
+                    />
+                  </div>
+
+                  <div class="form-field">
+                    <label for="currencyRateToHKD">Rate to HKD</label>
+                    <input
+                      type="number"
+                      id="currencyRateToHKD"
+                      min="0"
+                      step="0.000001"
+                      placeholder="e.g. 7.8"
+                      required
+                    />
+                  </div>
+
+                  <button type="submit" class="primary-btn">
+                    <i data-lucide="plus"></i>
+                    Add Currency
+                  </button>
+                </form>
+
+                <div class="settings-list" id="currencyList">
+                  <!-- JavaScript will render currencies here -->
                 </div>
               </article>
             </section>

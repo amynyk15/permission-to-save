@@ -1945,8 +1945,13 @@ button {
 
 .settings-badge.bank,
 .settings-badge.cash,
+.settings-badge.card,
 .settings-badge.e-wallet,
-.settings-badge.credit-card {
+.settings-badge.credit-card,
+.settings-badge.bank-transfer,
+.settings-badge.auto-payment,
+.settings-badge.online-payment,
+.settings-badge.others {
   background: #efefff;
   color: var(--primary-dark);
 }
@@ -3819,5 +3824,372 @@ body.dark-mode .cloud-user-box {
 
   .cloud-sync-actions button {
     white-space: normal;
+  }
+}
+
+/* TRANSACTION MULTI-CURRENCY */
+.transaction-currency-meta {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+body.dark-mode .transaction-currency-meta {
+  color: var(--muted);
+}
+
+#transactionAmount[readonly] {
+  background: #f6f3ff;
+  color: var(--primary-dark);
+  font-weight: 800;
+}
+
+body.dark-mode #transactionAmount[readonly] {
+  background: #151225;
+  color: #c7b8ff;
+}
+
+/* TRANSACTION PAYMENT METHOD + NOTES */
+.form-group-full {
+  grid-column: 1 / -1;
+}
+
+#transactionNotes {
+  min-height: 88px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  font: inherit;
+  color: var(--text);
+  background: #ffffff;
+}
+
+body.dark-mode #transactionNotes {
+  background: #101624;
+  color: var(--text);
+  border-color: #2b3346;
+}
+
+.transaction-detail-cell strong {
+  display: block;
+}
+
+.transaction-detail-meta {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.transaction-notes-meta {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+  max-width: 360px;
+}
+
+/* OPTIMIZED TRANSACTION MODAL LAYOUT */
+#transactionModal .modal-card {
+  max-width: 980px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+#transactionForm .transaction-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px 18px;
+}
+
+#transactionForm .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+#transactionForm .form-field label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+}
+
+#transactionForm .form-field input,
+#transactionForm .form-field select,
+#transactionForm .form-field textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #ffffff;
+  color: #111827;
+  font: inherit;
+  font-size: 14px;
+  outline: 0;
+}
+
+#transactionForm .form-field input,
+#transactionForm .form-field select {
+  height: 42px;
+  padding: 0 12px;
+}
+
+#transactionForm .form-field textarea {
+  min-height: 96px;
+  padding: 12px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+#transactionForm .form-field input:focus,
+#transactionForm .form-field select:focus,
+#transactionForm .form-field textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.12);
+}
+
+#transactionForm .notes-field {
+  grid-column: 1 / -1;
+}
+
+#transactionAmount[readonly] {
+  background: #f6f3ff;
+  color: var(--primary-dark);
+  font-weight: 800;
+}
+
+.transaction-currency-meta {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.transaction-detail-cell strong {
+  display: block;
+}
+
+.transaction-detail-meta {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.transaction-notes-meta {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+  max-width: 360px;
+}
+
+body.dark-mode #transactionForm .form-field label {
+  color: var(--text);
+}
+
+body.dark-mode #transactionForm .form-field input,
+body.dark-mode #transactionForm .form-field select,
+body.dark-mode #transactionForm .form-field textarea {
+  background: #111827;
+  color: #f8fafc;
+  border-color: #383b58;
+}
+
+body.dark-mode #transactionAmount[readonly] {
+  background: #151225;
+  color: #c7b8ff;
+}
+
+@media (max-width: 900px) {
+  #transactionModal .modal-card {
+    max-width: 720px;
+  }
+
+  #transactionForm .transaction-modal-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  #transactionModal .modal-card {
+    max-width: 100%;
+  }
+
+  #transactionForm .transaction-modal-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 1280px) {
+  .settings-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* CURRENCY SETTINGS */
+.currency-settings-form {
+  grid-template-columns: 90px 1fr 130px auto;
+}
+
+.currency-rate-text {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.settings-badge.currency {
+  background: #ebf0ff;
+  color: var(--blue);
+}
+
+@media (max-width: 1050px) {
+  .currency-settings-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* SUBSCRIPTION MULTI-CURRENCY */
+.subscription-currency-meta {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+#subscriptionFee[readonly] {
+  background: #f6f3ff;
+  color: var(--primary-dark);
+  font-weight: 800;
+}
+
+body.dark-mode #subscriptionFee[readonly] {
+  background: #151225;
+  color: #c7b8ff;
+}
+
+/* SETTINGS TOOLBAR */
+.settings-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.settings-view-btn {
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--text);
+  border-radius: 12px;
+  padding: 10px 18px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.settings-view-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: #f7f5ff;
+}
+
+.settings-view-btn.active {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 8px 18px rgba(99, 91, 255, 0.18);
+}
+
+/* SETTINGS GRID */
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  width: 100%;
+}
+
+.settings-grid.settings-single-view {
+  grid-template-columns: 1fr;
+}
+
+.settings-card,
+.settings-panel {
+  min-width: 0;
+}
+
+.settings-panel {
+  display: none;
+}
+
+.settings-panel.is-visible {
+  display: block;
+}
+
+/* 避免表格 / form 撐爆卡片 */
+.settings-card,
+.settings-form,
+.settings-list,
+.settings-item,
+.settings-item-main {
+  min-width: 0;
+}
+
+.settings-form {
+  width: 100%;
+}
+
+.settings-form .form-field {
+  min-width: 0;
+}
+
+.settings-form input,
+.settings-form select {
+  width: 100%;
+  min-width: 0;
+}
+
+.settings-form .primary-btn {
+  white-space: nowrap;
+}
+
+/* 防止整個 Settings 區域橫向溢出 */
+.settings-section,
+.settings-grid,
+.settings-card {
+  overflow-x: hidden;
+}
+
+/* RWD */
+@media (max-width: 1280px) {
+  .settings-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-toolbar {
+    gap: 10px;
+  }
+
+  .settings-view-btn {
+    width: 100%;
   }
 }

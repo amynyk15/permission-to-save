@@ -84,6 +84,98 @@ document.addEventListener("DOMContentLoaded", () => {
       { id: createId(), name: "Octopus", type: "E-Wallet" },
       { id: createId(), name: "Cash", type: "Cash" },
     ],
+    paymentMethods: [
+      { id: createId(), name: "Cash", type: "Cash" },
+      { id: createId(), name: "Credit Card", type: "Card" },
+      { id: createId(), name: "Debit Card", type: "Card" },
+      { id: createId(), name: "Bank Transfer", type: "Bank Transfer" },
+      { id: createId(), name: "FPS", type: "Transfer" },
+      { id: createId(), name: "Octopus", type: "E-Wallet" },
+      { id: createId(), name: "PayMe", type: "E-Wallet" },
+      { id: createId(), name: "Alipay HK", type: "E-Wallet" },
+      { id: createId(), name: "WeChat Pay", type: "E-Wallet" },
+      { id: createId(), name: "Auto Payment", type: "Auto Payment" },
+      { id: createId(), name: "Online Payment", type: "Online Payment" },
+    ],
+    currencies: [
+      {
+        id: createId(),
+        code: "HKD",
+        name: "Hong Kong Dollar",
+        rateToHKD: 1,
+        isBase: true,
+      },
+      {
+        id: createId(),
+        code: "USD",
+        name: "US Dollar",
+        rateToHKD: 1,
+        isBase: false,
+      },
+      {
+        id: createId(),
+        code: "GBP",
+        name: "British Pound",
+        rateToHKD: 1,
+        isBase: false,
+      },
+      {
+        id: createId(),
+        code: "EUR",
+        name: "Euro",
+        rateToHKD: 1,
+        isBase: false,
+      },
+      {
+        id: createId(),
+        code: "JPY",
+        name: "Japanese Yen",
+        rateToHKD: 1,
+        isBase: false,
+      },
+      {
+        id: createId(),
+        code: "CNY",
+        name: "Chinese Yuan",
+        rateToHKD: 1,
+        isBase: false,
+      },
+      {
+        id: createId(),
+        code: "TWD",
+        name: "New Taiwan Dollar",
+        rateToHKD: 1,
+        isBase: false,
+      },
+      {
+        id: createId(),
+        code: "THB",
+        name: "Thai Baht",
+        rateToHKD: 1,
+        isBase: false,
+      },
+      {
+        id: createId(),
+        code: "KRW",
+        name: "Korean Won",
+        rateToHKD: 1,
+        isBase: false,
+      },
+      {
+        id: createId(),
+        code: "SGD",
+        name: "Singapore Dollar",
+        rateToHKD: 1,
+        isBase: false,
+      },
+      {
+        id: createId(),
+        code: "MYR",
+        name: "Malaysian Ringgit",
+        rateToHKD: 1,
+        isBase: false,
+      },
+    ],
   };
 
   const defaultNetWorthItems = [];
@@ -399,6 +491,11 @@ document.addEventListener("DOMContentLoaded", () => {
       category: transaction.category,
       account: transaction.account,
       amount: Number(transaction.amount),
+      original_amount: Number(transaction.originalAmount ?? transaction.amount),
+      currency: transaction.currency || "HKD",
+      exchange_rate: Number(transaction.exchangeRate || 1),
+      payment_method: transaction.paymentMethod || "Not specified",
+      notes: transaction.notes || null,
       status: transaction.status,
       source: transaction.source || null,
       subscription_id: transaction.subscriptionId || null,
@@ -414,6 +511,11 @@ document.addEventListener("DOMContentLoaded", () => {
       category: row.category,
       account: row.account,
       amount: Number(row.amount),
+      originalAmount: Number(row.original_amount ?? row.amount),
+      currency: row.currency || "HKD",
+      exchangeRate: Number(row.exchange_rate || 1),
+      paymentMethod: row.payment_method || "Not specified",
+      notes: row.notes || "",
       status: row.status,
       source: row.source || "",
       subscriptionId: row.subscription_id || "",
@@ -906,6 +1008,9 @@ document.addEventListener("DOMContentLoaded", () => {
       item: subscription.item,
       plan: subscription.plan,
       fee: Number(subscription.fee),
+      original_fee: Number(subscription.originalFee ?? subscription.fee),
+      currency: subscription.currency || "HKD",
+      exchange_rate: Number(subscription.exchangeRate || 1),
       cycle: subscription.cycle,
       next_date: subscription.nextDate,
       status: subscription.status,
@@ -913,15 +1018,18 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function mapCloudRowToLocalSubscription(row) {
-    return {
+    return normalizeSubscription({
       id: row.local_id || row.id,
       item: row.item,
       plan: row.plan,
       fee: Number(row.fee),
+      originalFee: Number(row.original_fee ?? row.fee),
+      currency: row.currency || "HKD",
+      exchangeRate: Number(row.exchange_rate || 1),
       cycle: row.cycle,
       nextDate: row.next_date,
       status: row.status,
-    };
+    });
   }
 
   async function uploadSubscriptionsToCloud() {
@@ -1048,54 +1156,107 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function getSettingsCloudRows() {
-    const categoryRows = (settings.categories || []).map((category) => {
-      return {
-        user_id: currentCloudUser.id,
-        item_type: "category",
-        local_id: category.id,
-        name: category.name,
-        value_type: category.type,
-      };
-    });
+    const categoryRows = (settings.categories || []).map((category) => ({
+      user_id: currentCloudUser.id,
+      item_type: "category",
+      local_id: category.id,
+      name: category.name,
+      value_type: category.type,
+    }));
 
-    const accountRows = (settings.accounts || []).map((account) => {
-      return {
-        user_id: currentCloudUser.id,
-        item_type: "account",
-        local_id: account.id,
-        name: account.name,
-        value_type: account.type,
-      };
-    });
+    const accountRows = (settings.accounts || []).map((account) => ({
+      user_id: currentCloudUser.id,
+      item_type: "account",
+      local_id: account.id,
+      name: account.name,
+      value_type: account.type,
+    }));
 
-    return [...categoryRows, ...accountRows];
+    const paymentMethodRows = (settings.paymentMethods || []).map(
+      (paymentMethod) => ({
+        user_id: currentCloudUser.id,
+        item_type: "payment_method",
+        local_id: paymentMethod.id,
+        name: paymentMethod.name,
+        value_type: paymentMethod.type,
+      }),
+    );
+
+    const currencyRows = (settings.currencies || []).map((currency) => ({
+      user_id: currentCloudUser.id,
+      item_type: "currency",
+      local_id: currency.id,
+      name: currency.code,
+      value_type: currency.name,
+      numeric_value: Number(currency.rateToHKD || 1),
+    }));
+
+    return [
+      ...categoryRows,
+      ...accountRows,
+      ...paymentMethodRows,
+      ...currencyRows,
+    ];
   }
 
   function mapCloudRowsToSettings(rows) {
-    const cloudSettings = {
-      categories: [],
-      accounts: [],
-    };
+    const categories = [];
+    const accounts = [];
+    const paymentMethods = [];
+    const currencies = [];
 
     rows.forEach((row) => {
       if (row.item_type === "category") {
-        cloudSettings.categories.push({
-          id: row.local_id || createId(),
+        categories.push({
+          id: row.local_id || row.id,
           name: row.name,
           type: row.value_type,
         });
       }
 
       if (row.item_type === "account") {
-        cloudSettings.accounts.push({
-          id: row.local_id || createId(),
+        accounts.push({
+          id: row.local_id || row.id,
           name: row.name,
           type: row.value_type,
         });
       }
+
+      if (row.item_type === "payment_method") {
+        paymentMethods.push({
+          id: row.local_id || row.id,
+          name: row.name,
+          type: row.value_type,
+        });
+      }
+
+      if (row.item_type === "currency") {
+        currencies.push(
+          normalizeCurrency({
+            id: row.local_id || row.id,
+            code: row.name,
+            name: row.value_type,
+            rateToHKD: Number(row.numeric_value || 1),
+          }),
+        );
+      }
     });
 
-    return cloudSettings;
+    return {
+      categories,
+      accounts,
+      paymentMethods:
+        paymentMethods.length > 0
+          ? paymentMethods
+          : defaultSettings.paymentMethods.map((paymentMethod) => ({
+              ...paymentMethod,
+              id: paymentMethod.id || createId(),
+            })),
+      currencies:
+        currencies.length > 0
+          ? currencies
+          : defaultSettings.currencies.map(normalizeCurrency),
+    };
   }
 
   async function uploadSettingsToCloud() {
@@ -1198,6 +1359,7 @@ document.addEventListener("DOMContentLoaded", () => {
       local_id: item.id,
       name: item.name,
       value_type: item.type,
+      numeric_value: item.numericValue ?? null,
     };
   }
 
@@ -2083,6 +2245,229 @@ document.addEventListener("DOMContentLoaded", () => {
     })}`;
   }
 
+  function normalizeTransaction(transaction) {
+    const amount = Number(transaction.amount) || 0;
+
+    const currency = transaction.currency || "HKD";
+
+    const originalAmount = Number(
+      transaction.originalAmount ??
+        transaction.original_amount ??
+        transaction.originalamount ??
+        amount,
+    );
+
+    const exchangeRate = Number(
+      transaction.exchangeRate ??
+        transaction.exchange_rate ??
+        transaction.exchangerate ??
+        1,
+    );
+
+    const convertedAmount =
+      Number(transaction.amount) ||
+      Number((originalAmount * exchangeRate).toFixed(2));
+
+    return {
+      ...transaction,
+      id: transaction.id || createId(),
+      currency,
+      originalAmount: Number.isFinite(originalAmount) ? originalAmount : amount,
+      exchangeRate:
+        Number.isFinite(exchangeRate) && exchangeRate > 0 ? exchangeRate : 1,
+      amount: Number.isFinite(convertedAmount) ? convertedAmount : amount,
+      paymentMethod:
+        transaction.paymentMethod ||
+        transaction.payment_method ||
+        "Not specified",
+      notes: transaction.notes || "",
+    };
+  }
+
+  function normalizeSubscription(subscription) {
+    const fee = Number(subscription.fee) || 0;
+
+    const currency = subscription.currency || "HKD";
+
+    const originalFee = Number(
+      subscription.originalFee ??
+        subscription.original_fee ??
+        subscription.originalfee ??
+        fee,
+    );
+
+    const exchangeRate = Number(
+      subscription.exchangeRate ??
+        subscription.exchange_rate ??
+        subscription.exchangerate ??
+        1,
+    );
+
+    const convertedFee =
+      Number(subscription.fee) ||
+      Number((originalFee * exchangeRate).toFixed(2));
+
+    return {
+      ...subscription,
+      id: subscription.id || createId(),
+      currency,
+      originalFee: Number.isFinite(originalFee) ? originalFee : fee,
+      exchangeRate:
+        Number.isFinite(exchangeRate) && exchangeRate > 0 ? exchangeRate : 1,
+      fee: Number.isFinite(convertedFee) ? convertedFee : fee,
+    };
+  }
+
+  function getSubscriptionOriginalFeeHtml(subscription) {
+    const currency = subscription.currency || "HKD";
+    const originalFee = Number(subscription.originalFee ?? subscription.fee);
+    const exchangeRate = Number(subscription.exchangeRate || 1);
+
+    if (currency === "HKD") {
+      return "";
+    }
+
+    return `
+    <span class="subscription-currency-meta">
+      ${formatCurrencyAmount(originalFee, currency)} · Rate ${exchangeRate}
+    </span>
+  `;
+  }
+
+  function updateSubscriptionConvertedFee() {
+    const originalFeeInput = document.getElementById("subscriptionOriginalFee");
+    const currencyInput = document.getElementById("subscriptionCurrency");
+    const exchangeRateInput = document.getElementById(
+      "subscriptionExchangeRate",
+    );
+    const feeInput = document.getElementById("subscriptionFee");
+
+    if (
+      !originalFeeInput ||
+      !currencyInput ||
+      !exchangeRateInput ||
+      !feeInput
+    ) {
+      return;
+    }
+
+    const originalFee = Number(originalFeeInput.value);
+    const currency = currencyInput.value || "HKD";
+    const exchangeRate = Number(exchangeRateInput.value);
+
+    if (currency === "HKD") {
+      exchangeRateInput.value = "1";
+    }
+
+    const finalRate = currency === "HKD" ? 1 : exchangeRate;
+
+    if (
+      !Number.isFinite(originalFee) ||
+      originalFee <= 0 ||
+      !Number.isFinite(finalRate) ||
+      finalRate <= 0
+    ) {
+      feeInput.value = "";
+      return;
+    }
+
+    feeInput.value = (originalFee * finalRate).toFixed(2);
+  }
+
+  function applySelectedSubscriptionCurrencyRate() {
+    const currencyInput = document.getElementById("subscriptionCurrency");
+    const exchangeRateInput = document.getElementById(
+      "subscriptionExchangeRate",
+    );
+
+    if (!currencyInput || !exchangeRateInput) return;
+
+    const currencyCode = currencyInput.value || "HKD";
+    const selectedCurrency = getCurrencyByCode(currencyCode);
+
+    if (currencyCode === "HKD") {
+      exchangeRateInput.value = "1";
+      return;
+    }
+
+    if (selectedCurrency && Number(selectedCurrency.rateToHKD) > 0) {
+      exchangeRateInput.value = selectedCurrency.rateToHKD;
+    }
+  }
+
+  function formatCurrencyAmount(amount, currency) {
+    const number = Number(amount);
+
+    if (!Number.isFinite(number)) {
+      return `${currency} 0`;
+    }
+
+    return `${currency} ${number.toLocaleString("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    })}`;
+  }
+
+  function getTransactionOriginalAmountHtml(transaction) {
+    const currency = transaction.currency || "HKD";
+    const originalAmount = Number(
+      transaction.originalAmount ?? transaction.amount,
+    );
+    const exchangeRate = Number(transaction.exchangeRate || 1);
+
+    if (currency === "HKD") {
+      return "";
+    }
+
+    return `
+    <span class="transaction-currency-meta">
+      ${formatCurrencyAmount(originalAmount, currency)} · Rate ${exchangeRate}
+    </span>
+  `;
+  }
+
+  function updateTransactionConvertedAmount() {
+    const originalAmountInput = document.getElementById(
+      "transactionOriginalAmount",
+    );
+    const currencyInput = document.getElementById("transactionCurrency");
+    const exchangeRateInput = document.getElementById(
+      "transactionExchangeRate",
+    );
+    const amountInput = document.getElementById("transactionAmount");
+
+    if (
+      !originalAmountInput ||
+      !currencyInput ||
+      !exchangeRateInput ||
+      !amountInput
+    ) {
+      return;
+    }
+
+    const originalAmount = Number(originalAmountInput.value);
+    const currency = currencyInput.value || "HKD";
+    const exchangeRate = Number(exchangeRateInput.value);
+
+    if (currency === "HKD") {
+      exchangeRateInput.value = "1";
+    }
+
+    const finalRate = currency === "HKD" ? 1 : exchangeRate;
+
+    if (
+      !Number.isFinite(originalAmount) ||
+      originalAmount <= 0 ||
+      !Number.isFinite(finalRate) ||
+      finalRate <= 0
+    ) {
+      amountInput.value = "";
+      return;
+    }
+
+    amountInput.value = (originalAmount * finalRate).toFixed(2);
+  }
+
   function getTransactionMonth(dateString) {
     if (!dateString) return "";
     return dateString.slice(0, 7);
@@ -2090,6 +2475,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function getBadgeClass(value) {
     return String(value).toLowerCase().replace(/\s+/g, "-");
+  }
+
+  function getTransactionDetailMetaHtml(transaction) {
+    const paymentMethod = transaction.paymentMethod || "Not specified";
+    const notes = transaction.notes || "";
+
+    const paymentText =
+      paymentMethod && paymentMethod !== "Not specified"
+        ? `<span class="transaction-detail-meta">Payment: ${paymentMethod}</span>`
+        : "";
+
+    const notesText = notes
+      ? `<span class="transaction-notes-meta">Notes: ${notes}</span>`
+      : "";
+
+    return `${paymentText}${notesText}`;
   }
 
   // =========================
@@ -2100,10 +2501,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const savedData = localStorage.getItem(STORAGE_KEY);
 
     if (savedData) {
-      return JSON.parse(savedData).map((transaction) => ({
-        ...transaction,
-        id: transaction.id || createId(),
-      }));
+      return JSON.parse(savedData).map(normalizeTransaction);
     }
 
     return defaultTransactions;
@@ -2200,13 +2598,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const savedSubscriptions = localStorage.getItem(SUBSCRIPTION_STORAGE_KEY);
 
     if (savedSubscriptions) {
-      return JSON.parse(savedSubscriptions).map((subscription) => ({
-        ...subscription,
-        id: subscription.id || createId(),
-      }));
+      return JSON.parse(savedSubscriptions).map(normalizeSubscription);
     }
 
-    return defaultSubscriptions;
+    return defaultSubscriptions.map(normalizeSubscription);
   }
 
   function saveSubscriptions() {
@@ -2232,6 +2627,21 @@ document.addEventListener("DOMContentLoaded", () => {
           ...account,
           id: account.id || createId(),
         })),
+
+        paymentMethods: (
+          parsedSettings.paymentMethods ||
+          defaultSettings.paymentMethods ||
+          []
+        ).map((paymentMethod) => ({
+          ...paymentMethod,
+          id: paymentMethod.id || createId(),
+        })),
+
+        currencies: (
+          parsedSettings.currencies ||
+          defaultSettings.currencies ||
+          []
+        ).map(normalizeCurrency),
       };
     }
 
@@ -2374,6 +2784,89 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
+  function normalizeCurrency(currency) {
+    const code = String(currency.code || currency.name || "HKD")
+      .trim()
+      .toUpperCase();
+
+    const name = String(currency.name || code).trim();
+
+    const rateToHKD = Number(
+      currency.rateToHKD ?? currency.rate_to_hkd ?? currency.numeric_value ?? 1,
+    );
+
+    return {
+      ...currency,
+      id: currency.id || createId(),
+      code,
+      name,
+      rateToHKD: Number.isFinite(rateToHKD) && rateToHKD > 0 ? rateToHKD : 1,
+      isBase: code === "HKD",
+    };
+  }
+
+  function getCurrencyOptions() {
+    const currencies = settings.currencies || defaultSettings.currencies || [];
+
+    return currencies.map(normalizeCurrency);
+  }
+
+  function getCurrencyByCode(currencyCode) {
+    const code = String(currencyCode || "HKD").toUpperCase();
+
+    return getCurrencyOptions().find((currency) => {
+      return currency.code === code;
+    });
+  }
+
+  function populateCurrencySelect(selectElement, selectedValue = "HKD") {
+    if (!selectElement) return;
+
+    const currencies = getCurrencyOptions();
+
+    selectElement.innerHTML = "";
+
+    currencies.forEach((currency) => {
+      const option = document.createElement("option");
+      option.value = currency.code;
+      option.textContent = `${currency.code} - ${currency.name}`;
+      selectElement.appendChild(option);
+    });
+
+    selectElement.value = selectedValue || "HKD";
+
+    if (!selectElement.value && currencies.length > 0) {
+      selectElement.value = currencies[0].code;
+    }
+  }
+
+  function applySelectedCurrencyRate() {
+    const currencyInput = document.getElementById("transactionCurrency");
+    const exchangeRateInput = document.getElementById(
+      "transactionExchangeRate",
+    );
+
+    if (!currencyInput || !exchangeRateInput) return;
+
+    const currencyCode = currencyInput.value || "HKD";
+    const selectedCurrency = getCurrencyByCode(currencyCode);
+
+    if (currencyCode === "HKD") {
+      exchangeRateInput.value = "1";
+      return;
+    }
+
+    if (selectedCurrency && Number(selectedCurrency.rateToHKD) > 0) {
+      exchangeRateInput.value = selectedCurrency.rateToHKD;
+    }
+  }
+
+  function getPaymentMethodOptions() {
+    return getUniqueNames(
+      settings.paymentMethods || defaultSettings.paymentMethods || [],
+    );
+  }
+
   function getTransactionCategoriesByType(transactionType) {
     if (!settings || !settings.categories) return [];
 
@@ -2414,6 +2907,8 @@ document.addEventListener("DOMContentLoaded", () => {
   function populateTransactionDropdowns(options = {}) {
     const preserveCategory = options.preserveCategory !== false;
     const preserveAccount = options.preserveAccount !== false;
+    const preservePaymentMethod = options.preservePaymentMethod !== false;
+    const preserveCurrency = options.preserveCurrency !== false;
 
     const transactionTypeSelect = document.getElementById("transactionType");
     const transactionCategorySelect = document.getElementById(
@@ -2421,6 +2916,12 @@ document.addEventListener("DOMContentLoaded", () => {
     );
     const transactionAccountSelect =
       document.getElementById("transactionAccount");
+    const transactionPaymentMethodSelect = document.getElementById(
+      "transactionPaymentMethod",
+    );
+    const transactionCurrencySelect = document.getElementById(
+      "transactionCurrency",
+    );
     const categoryFilterSelect = document.getElementById("categoryFilter");
 
     const currentCategory = transactionCategorySelect
@@ -2429,6 +2930,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const currentAccount = transactionAccountSelect
       ? transactionAccountSelect.value
       : "";
+    const currentPaymentMethod = transactionPaymentMethodSelect
+      ? transactionPaymentMethodSelect.value
+      : "";
+
+    const currentCurrency = transactionCurrencySelect
+      ? transactionCurrencySelect.value
+      : "HKD";
+
     const currentFilter = categoryFilterSelect
       ? categoryFilterSelect.value
       : "All Categories";
@@ -2443,6 +2952,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const allCategoryOptions = getUniqueNames(settings.categories || []);
     const accountOptions = getUniqueNames(settings.accounts || []);
+    const paymentMethodOptions = getPaymentMethodOptions();
 
     populateSelectOptions(
       transactionCategorySelect,
@@ -2450,10 +2960,21 @@ document.addEventListener("DOMContentLoaded", () => {
       preserveCategory ? currentCategory : "",
     );
 
+    populateCurrencySelect(
+      transactionCurrencySelect,
+      preserveCurrency ? currentCurrency : "HKD",
+    );
+
     populateSelectOptions(
       transactionAccountSelect,
       accountOptions,
       preserveAccount ? currentAccount : "",
+    );
+
+    populateSelectOptions(
+      transactionPaymentMethodSelect,
+      paymentMethodOptions,
+      preservePaymentMethod ? currentPaymentMethod : "",
     );
 
     if (categoryFilterSelect) {
@@ -2495,6 +3016,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const descriptionInput = document.getElementById("transactionDescription");
     const categoryInput = document.getElementById("transactionCategory");
     const accountInput = document.getElementById("transactionAccount");
+    const paymentMethodInput = document.getElementById(
+      "transactionPaymentMethod",
+    );
+    const notesInput = document.getElementById("transactionNotes");
+    const originalAmountInput = document.getElementById(
+      "transactionOriginalAmount",
+    );
+    const currencyInput = document.getElementById("transactionCurrency");
+    const exchangeRateInput = document.getElementById(
+      "transactionExchangeRate",
+    );
     const amountInput = document.getElementById("transactionAmount");
     const statusInput = document.getElementById("transactionStatus");
 
@@ -2505,7 +3037,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const description = getTrimmedInputValue(descriptionInput);
     const category = getTrimmedInputValue(categoryInput);
     const account = getTrimmedInputValue(accountInput);
-    const amount = Number(amountInput.value);
+    const paymentMethod =
+      getTrimmedInputValue(paymentMethodInput) || "Not specified";
+    const notes = getTrimmedInputValue(notesInput);
+    const originalAmount = Number(originalAmountInput.value);
+    const currency = getTrimmedInputValue(currencyInput) || "HKD";
+    const exchangeRate = Number(exchangeRateInput.value);
+    const amount = Number((originalAmount * exchangeRate).toFixed(2));
     const status = getTrimmedInputValue(statusInput);
 
     if (!date) {
@@ -2549,10 +3087,46 @@ document.addEventListener("DOMContentLoaded", () => {
       return null;
     }
 
+    if (!paymentMethod) {
+      showFormError(
+        transactionForm,
+        "Please select a payment method.",
+        paymentMethodInput,
+      );
+      return null;
+    }
+
+    if (!Number.isFinite(originalAmount) || originalAmount <= 0) {
+      showFormError(
+        transactionForm,
+        "Original amount must be greater than 0.",
+        originalAmountInput,
+      );
+      return null;
+    }
+
+    if (!currency) {
+      showFormError(
+        transactionForm,
+        "Please select a currency.",
+        currencyInput,
+      );
+      return null;
+    }
+
+    if (!Number.isFinite(exchangeRate) || exchangeRate <= 0) {
+      showFormError(
+        transactionForm,
+        "Exchange rate must be greater than 0.",
+        exchangeRateInput,
+      );
+      return null;
+    }
+
     if (!Number.isFinite(amount) || amount <= 0) {
       showFormError(
         transactionForm,
-        "Amount must be greater than 0.",
+        "Amount HKD must be greater than 0.",
         amountInput,
       );
       return null;
@@ -2570,6 +3144,11 @@ document.addEventListener("DOMContentLoaded", () => {
       category,
       account,
       amount,
+      originalAmount,
+      currency,
+      exchangeRate,
+      paymentMethod,
+      notes,
       status,
     };
   }
@@ -2592,6 +3171,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       updateTransactionSummary();
       populateTransactionMonthFilter();
+      populateTransactionCurrencyFilter();
+      populateTransactionPaymentMethodFilter();
       filterTransactions();
       renderMonthlySnapshot();
       renderBudgetPlanner();
@@ -2614,15 +3195,24 @@ document.addEventListener("DOMContentLoaded", () => {
       row.dataset.type = transaction.type;
       row.dataset.category = transaction.category;
       row.dataset.status = transaction.status;
+      row.dataset.currency = transaction.currency || "HKD";
+      row.dataset.paymentMethod = transaction.paymentMethod || "Not specified";
       row.dataset.amount = transaction.amount;
 
       row.innerHTML = `
         <td>${transaction.date}</td>
         <td>${transaction.description}</td>
+        <td class="transaction-detail-cell">
+  <strong>${transaction.description}</strong>
+  ${getTransactionDetailMetaHtml(transaction)}
+</td>
         <td><span class="tag ${typeTagClass}">${transaction.type}</span></td>
         <td>${transaction.category}</td>
         <td>${transaction.account}</td>
-        <td class="${amountClass}">${formatHKD(transaction.amount)}</td>
+        <td class="${amountClass}">
+  <strong>${formatHKD(transaction.amount)}</strong>
+  ${getTransactionOriginalAmountHtml(transaction)}
+</td>
         <td><span class="status ${statusDotClass}"></span>${transaction.status}</td>
         <td>
           <div class="action-buttons">
@@ -2642,6 +3232,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     updateTransactionSummary();
     populateTransactionMonthFilter();
+    populateTransactionCurrencyFilter();
+    populateTransactionPaymentMethodFilter();
     filterTransactions();
     renderMonthlySnapshot();
     renderBudgetPlanner();
@@ -2725,6 +3317,88 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function populateTransactionCurrencyFilter() {
+    const currencyFilter = document.getElementById("currencyFilter");
+
+    if (!currencyFilter) return;
+
+    const currentValue = currencyFilter.value || "All Currencies";
+
+    const settingCurrencies = getCurrencyOptions().map((currency) => {
+      return currency.code;
+    });
+
+    const transactionCurrencies = transactions.map((transaction) => {
+      return transaction.currency || "HKD";
+    });
+
+    const currencies = Array.from(
+      new Set([...settingCurrencies, ...transactionCurrencies]),
+    )
+      .filter(Boolean)
+      .sort();
+
+    currencyFilter.innerHTML = "";
+
+    const allOption = document.createElement("option");
+    allOption.value = "All Currencies";
+    allOption.textContent = "All Currencies";
+    currencyFilter.appendChild(allOption);
+
+    currencies.forEach((currencyCode) => {
+      const option = document.createElement("option");
+      option.value = currencyCode;
+      option.textContent = currencyCode;
+      currencyFilter.appendChild(option);
+    });
+
+    if (currentValue && currencies.includes(currentValue)) {
+      currencyFilter.value = currentValue;
+    } else {
+      currencyFilter.value = "All Currencies";
+    }
+  }
+
+  function populateTransactionPaymentMethodFilter() {
+    const paymentMethodFilter = document.getElementById("paymentMethodFilter");
+
+    if (!paymentMethodFilter) return;
+
+    const currentValue = paymentMethodFilter.value || "All Payment Methods";
+
+    const settingPaymentMethods = getPaymentMethodOptions();
+
+    const transactionPaymentMethods = transactions.map((transaction) => {
+      return transaction.paymentMethod || "Not specified";
+    });
+
+    const paymentMethods = Array.from(
+      new Set([...settingPaymentMethods, ...transactionPaymentMethods]),
+    )
+      .filter(Boolean)
+      .sort();
+
+    paymentMethodFilter.innerHTML = "";
+
+    const allOption = document.createElement("option");
+    allOption.value = "All Payment Methods";
+    allOption.textContent = "All Payment Methods";
+    paymentMethodFilter.appendChild(allOption);
+
+    paymentMethods.forEach((paymentMethod) => {
+      const option = document.createElement("option");
+      option.value = paymentMethod;
+      option.textContent = paymentMethod;
+      paymentMethodFilter.appendChild(option);
+    });
+
+    if (currentValue && paymentMethods.includes(currentValue)) {
+      paymentMethodFilter.value = currentValue;
+    } else {
+      paymentMethodFilter.value = "All Payment Methods";
+    }
+  }
+
   function filterTransactions() {
     const transactionSearch = document.getElementById("transactionSearch");
     const categoryFilter = document.getElementById("categoryFilter");
@@ -2750,6 +3424,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const selectedType = typeFilter ? typeFilter.value : "All Types";
     const selectedStatus = statusFilter ? statusFilter.value : "All Statuses";
+    const selectedCurrency = currencyFilter
+      ? currencyFilter.value
+      : "All Currencies";
+    const selectedPaymentMethod = paymentMethodFilter
+      ? paymentMethodFilter.value
+      : "All Payment Methods";
     const selectedMonth = monthFilter ? monthFilter.value : "All Months";
 
     const rows = Array.from(
@@ -2763,6 +3443,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const rowCategory = row.dataset.category;
       const rowType = row.dataset.type;
       const rowStatus = row.dataset.status;
+      const rowCurrency = row.dataset.currency || "HKD";
+      const rowPaymentMethod = row.dataset.paymentMethod || "Not specified";
       const rowDate = row.children[0] ? row.children[0].textContent.trim() : "";
       const rowMonth = rowDate.slice(0, 7);
 
@@ -2778,6 +3460,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const matchesStatus =
         selectedStatus === "All Statuses" || rowStatus === selectedStatus;
 
+      const matchesCurrency =
+        selectedCurrency === "All Currencies" ||
+        rowCurrency === selectedCurrency;
+
+      const matchesPaymentMethod =
+        selectedPaymentMethod === "All Payment Methods" ||
+        rowPaymentMethod === selectedPaymentMethod;
+
       const matchesMonth =
         selectedMonth === "All Months" || rowMonth === selectedMonth;
 
@@ -2786,6 +3476,8 @@ document.addEventListener("DOMContentLoaded", () => {
         matchesCategory &&
         matchesType &&
         matchesStatus &&
+        matchesCurrency &&
+        matchesPaymentMethod &&
         matchesMonth;
 
       row.style.display = shouldShow ? "" : "none";
@@ -2849,6 +3541,20 @@ document.addEventListener("DOMContentLoaded", () => {
     setModalMode("add");
     transactionForm.reset();
 
+    const originalAmountInput = document.getElementById(
+      "transactionOriginalAmount",
+    );
+    const currencyInput = document.getElementById("transactionCurrency");
+    const exchangeRateInput = document.getElementById(
+      "transactionExchangeRate",
+    );
+    const amountInput = document.getElementById("transactionAmount");
+
+    if (originalAmountInput) originalAmountInput.value = "";
+    if (currencyInput) currencyInput.value = "HKD";
+    if (exchangeRateInput) exchangeRateInput.value = "1";
+    if (amountInput) amountInput.value = "";
+
     if (transactionTypeSelect) {
       transactionTypeSelect.value = "Expense";
     }
@@ -2856,6 +3562,8 @@ document.addEventListener("DOMContentLoaded", () => {
     populateTransactionDropdowns({
       preserveCategory: false,
       preserveAccount: false,
+      preservePaymentMethod: false,
+      preserveCurrency: false,
     });
 
     const dateInput = document.getElementById("transactionDate");
@@ -2887,6 +3595,19 @@ document.addEventListener("DOMContentLoaded", () => {
       transaction.description;
     document.getElementById("transactionCategory").value = transaction.category;
     document.getElementById("transactionAccount").value = transaction.account;
+    document.getElementById("transactionPaymentMethod").value =
+      transaction.paymentMethod || "Not specified";
+
+    document.getElementById("transactionNotes").value = transaction.notes || "";
+    document.getElementById("transactionOriginalAmount").value =
+      transaction.originalAmount ?? transaction.amount;
+
+    document.getElementById("transactionCurrency").value =
+      transaction.currency || "HKD";
+
+    document.getElementById("transactionExchangeRate").value =
+      transaction.exchangeRate || 1;
+
     document.getElementById("transactionAmount").value = transaction.amount;
     document.getElementById("transactionStatus").value = transaction.status;
 
@@ -2904,6 +3625,19 @@ document.addEventListener("DOMContentLoaded", () => {
     if (transactionForm) {
       clearFormError(transactionForm);
       transactionForm.reset();
+    }
+
+    const paymentMethodInput = document.getElementById(
+      "transactionPaymentMethod",
+    );
+    const notesInput = document.getElementById("transactionNotes");
+
+    if (paymentMethodInput) {
+      paymentMethodInput.value = "Cash";
+    }
+
+    if (notesInput) {
+      notesInput.value = "";
     }
 
     editingTransactionId = null;
@@ -3332,7 +4066,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       row.innerHTML = `
       <td>${transaction.date}</td>
-      <td>${transaction.description}</td>
       <td><span class="tag ${tagClass}">${transaction.category}</span></td>
       <td>${transaction.account}</td>
       <td><span class="status ${statusDotClass}"></span>${transaction.status}</td>
@@ -3742,6 +4475,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const categoryFilter = document.getElementById("categoryFilter");
     const typeFilter = document.getElementById("typeFilter");
     const statusFilter = document.getElementById("statusFilter");
+    const currencyFilter = document.getElementById("currencyFilter");
+    const paymentMethodFilter = document.getElementById("paymentMethodFilter");
     const monthFilter = document.getElementById("monthFilter");
 
     populateTransactionDropdowns();
@@ -4595,6 +5330,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const amount = Number(subscription.fee);
+    const originalAmount = Number(subscription.originalFee ?? subscription.fee);
+    const currency = subscription.currency || "HKD";
+    const exchangeRate = Number(subscription.exchangeRate || 1);
 
     if (!Number.isFinite(amount) || amount <= 0) {
       showToast("Subscription fee must be greater than 0.", "error");
@@ -4606,7 +5344,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const account = getDefaultTransactionAccount();
 
     const confirmed = confirm(
-      `Create a completed expense transaction for ${subscription.item}?\n\nDate: ${transactionDate}\nAmount: ${formatHKD(amount)}\nCategory: ${category}`,
+      `Create a completed expense transaction for ${subscription.item}?\n\nDate: ${transactionDate}\nAmount: ${formatHKD(amount)}${
+        currency !== "HKD"
+          ? `\nOriginal: ${formatCurrencyAmount(originalAmount, currency)}`
+          : ""
+      }\nCategory: ${category}`,
     );
 
     if (!confirmed) return;
@@ -4620,6 +5362,9 @@ document.addEventListener("DOMContentLoaded", () => {
       description: `${subscription.item} - ${subscription.plan}`,
       category,
       account,
+      originalAmount,
+      currency,
+      exchangeRate,
       amount,
       status: "Completed",
       source: "subscription",
@@ -4671,7 +5416,17 @@ document.addEventListener("DOMContentLoaded", () => {
       statusFilter.value = "All Statuses";
     }
 
+    if (currencyFilter) {
+      currencyFilter.value = "All Currencies";
+    }
+
+    if (paymentMethodFilter) {
+      paymentMethodFilter.value = "All Payment Methods";
+    }
+
     populateTransactionMonthFilter();
+    populateTransactionCurrencyFilter();
+    populateTransactionPaymentMethodFilter();
 
     if (monthFilter) {
       monthFilter.value = "All Months";
@@ -4698,6 +5453,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const itemInput = document.getElementById("subscriptionItem");
     const planInput = document.getElementById("subscriptionPlan");
+    const originalFeeInput = document.getElementById("subscriptionOriginalFee");
+    const currencyInput = document.getElementById("subscriptionCurrency");
+    const exchangeRateInput = document.getElementById(
+      "subscriptionExchangeRate",
+    );
     const feeInput = document.getElementById("subscriptionFee");
     const cycleInput = document.getElementById("subscriptionCycle");
     const nextDateInput = document.getElementById("subscriptionNextDate");
@@ -4707,7 +5467,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const item = getTrimmedInputValue(itemInput);
     const plan = getTrimmedInputValue(planInput);
-    const fee = Number(feeInput.value);
+    const originalFee = Number(originalFeeInput.value);
+    const currency = getTrimmedInputValue(currencyInput) || "HKD";
+    const exchangeRate = Number(exchangeRateInput.value);
+    const fee = Number((originalFee * exchangeRate).toFixed(2));
     const cycle = getTrimmedInputValue(cycleInput);
     const nextDate = getTrimmedInputValue(nextDateInput);
     const status = getTrimmedInputValue(statusInput);
@@ -4730,10 +5493,37 @@ document.addEventListener("DOMContentLoaded", () => {
       return null;
     }
 
+    if (!Number.isFinite(originalFee) || originalFee <= 0) {
+      showFormError(
+        subscriptionForm,
+        "Original fee must be greater than 0.",
+        originalFeeInput,
+      );
+      return null;
+    }
+
+    if (!currency) {
+      showFormError(
+        subscriptionForm,
+        "Please select a currency.",
+        currencyInput,
+      );
+      return null;
+    }
+
+    if (!Number.isFinite(exchangeRate) || exchangeRate <= 0) {
+      showFormError(
+        subscriptionForm,
+        "Exchange rate must be greater than 0.",
+        exchangeRateInput,
+      );
+      return null;
+    }
+
     if (!Number.isFinite(fee) || fee <= 0) {
       showFormError(
         subscriptionForm,
-        "Subscription fee must be greater than 0.",
+        "Fee HKD must be greater than 0.",
         feeInput,
       );
       return null;
@@ -4766,6 +5556,9 @@ document.addEventListener("DOMContentLoaded", () => {
       item,
       plan,
       fee,
+      originalFee,
+      currency,
+      exchangeRate,
       cycle,
       nextDate,
       status,
@@ -4843,7 +5636,10 @@ document.addEventListener("DOMContentLoaded", () => {
         </td>
 
         <td>${subscription.plan}</td>
-        <td class="red">${formatHKD(subscription.fee)}</td>
+        <td class="red">
+  <strong>${formatHKD(subscription.fee)}</strong>
+  ${getSubscriptionOriginalFeeHtml(subscription)}
+</td>
         <td>${subscription.cycle}</td>
         <td>${subscription.nextDate}</td>
 
@@ -4911,6 +5707,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     editingSubscriptionId = null;
     subscriptionForm.reset();
+    populateCurrencySelect(
+      document.getElementById("subscriptionCurrency"),
+      "HKD",
+    );
+
+    const originalFeeInput = document.getElementById("subscriptionOriginalFee");
+    const currencyInput = document.getElementById("subscriptionCurrency");
+    const exchangeRateInput = document.getElementById(
+      "subscriptionExchangeRate",
+    );
+    const feeInput = document.getElementById("subscriptionFee");
+
+    if (originalFeeInput) originalFeeInput.value = "";
+    if (currencyInput) currencyInput.value = "HKD";
+    if (exchangeRateInput) exchangeRateInput.value = "1";
+    if (feeInput) feeInput.value = "";
     setSubscriptionModalMode("add");
 
     document.getElementById("subscriptionNextDate").value =
@@ -4934,6 +5746,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("subscriptionItem").value = subscription.item;
     document.getElementById("subscriptionPlan").value = subscription.plan;
+
+    populateCurrencySelect(
+      document.getElementById("subscriptionCurrency"),
+      subscription.currency || "HKD",
+    );
+
+    document.getElementById("subscriptionOriginalFee").value =
+      subscription.originalFee ?? subscription.fee;
+
+    document.getElementById("subscriptionCurrency").value =
+      subscription.currency || "HKD";
+
+    document.getElementById("subscriptionExchangeRate").value =
+      subscription.exchangeRate || 1;
+
     document.getElementById("subscriptionFee").value = subscription.fee;
     document.getElementById("subscriptionCycle").value = subscription.cycle;
     document.getElementById("subscriptionNextDate").value =
@@ -5080,14 +5907,131 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
+  function validatePaymentMethodForm() {
+    const paymentMethodForm = document.getElementById("paymentMethodForm");
+
+    const paymentMethodNameInput = document.getElementById("paymentMethodName");
+    const paymentMethodTypeInput = document.getElementById("paymentMethodType");
+
+    clearFormError(paymentMethodForm);
+
+    const name = getTrimmedInputValue(paymentMethodNameInput);
+    const type = getTrimmedInputValue(paymentMethodTypeInput);
+
+    if (!name) {
+      showFormError(
+        paymentMethodForm,
+        "Please enter a payment method name.",
+        paymentMethodNameInput,
+      );
+      return null;
+    }
+
+    if (!type) {
+      showFormError(
+        paymentMethodForm,
+        "Please select a payment method type.",
+        paymentMethodTypeInput,
+      );
+      return null;
+    }
+
+    const duplicatedPaymentMethod = (settings.paymentMethods || []).some(
+      (paymentMethod) => {
+        return paymentMethod.name.toLowerCase() === name.toLowerCase();
+      },
+    );
+
+    if (duplicatedPaymentMethod) {
+      showFormError(
+        paymentMethodForm,
+        "This payment method already exists. Please use another name.",
+        paymentMethodNameInput,
+      );
+      return null;
+    }
+
+    return {
+      name,
+      type,
+    };
+  }
+
+  function validateCurrencyForm() {
+    const currencyForm = document.getElementById("currencyForm");
+
+    const currencyCodeInput = document.getElementById("currencyCode");
+    const currencyNameInput = document.getElementById("currencyName");
+    const currencyRateInput = document.getElementById("currencyRateToHKD");
+
+    clearFormError(currencyForm);
+
+    const code = getTrimmedInputValue(currencyCodeInput).toUpperCase();
+    const name = getTrimmedInputValue(currencyNameInput);
+    const rateToHKD = Number(currencyRateInput.value);
+
+    if (!code || code.length !== 3) {
+      showFormError(
+        currencyForm,
+        "Please enter a 3-letter currency code.",
+        currencyCodeInput,
+      );
+      return null;
+    }
+
+    if (!name) {
+      showFormError(
+        currencyForm,
+        "Please enter a currency name.",
+        currencyNameInput,
+      );
+      return null;
+    }
+
+    if (!Number.isFinite(rateToHKD) || rateToHKD <= 0) {
+      showFormError(
+        currencyForm,
+        "Exchange rate must be greater than 0.",
+        currencyRateInput,
+      );
+      return null;
+    }
+
+    const duplicatedCurrency = getCurrencyOptions().some((currency) => {
+      return currency.code === code;
+    });
+
+    if (duplicatedCurrency) {
+      showFormError(
+        currencyForm,
+        "This currency already exists.",
+        currencyCodeInput,
+      );
+      return null;
+    }
+
+    return {
+      code,
+      name,
+      rateToHKD,
+      isBase: code === "HKD",
+    };
+  }
+
   function renderSettings() {
     const categoryList = document.getElementById("categoryList");
     const accountList = document.getElementById("accountList");
+    const paymentMethodList = document.getElementById("paymentMethodList");
+    const currencyList = document.getElementById("currencyList");
 
-    if (!categoryList || !accountList) return;
+    if (!categoryList || !accountList || !paymentMethodList || !currencyList) {
+      return;
+    }
 
     categoryList.innerHTML = "";
     accountList.innerHTML = "";
+    paymentMethodList.innerHTML = "";
+    currencyList.innerHTML = "";
 
     if (settings.categories.length === 0) {
       categoryList.innerHTML = `
@@ -5173,6 +6117,98 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
+    if (!settings.paymentMethods || settings.paymentMethods.length === 0) {
+      paymentMethodList.innerHTML = `
+    <div class="settings-empty">No payment methods yet.</div>
+  `;
+    } else {
+      settings.paymentMethods.forEach((paymentMethod) => {
+        const item = document.createElement("div");
+        item.className = "settings-item";
+
+        const badgeClass = getBadgeClass(paymentMethod.type);
+
+        item.innerHTML = `
+      <div class="settings-item-main">
+        <strong>${paymentMethod.name}</strong>
+        <span class="settings-badge ${badgeClass}">${paymentMethod.type}</span>
+      </div>
+
+      <div class="action-buttons">
+        <button
+          class="edit-transaction-btn edit-payment-method-btn"
+          data-id="${paymentMethod.id}"
+          type="button"
+          aria-label="Edit payment method"
+        >
+          <i data-lucide="pencil"></i>
+        </button>
+
+        <button
+          class="delete-transaction-btn delete-payment-method-btn"
+          data-id="${paymentMethod.id}"
+          type="button"
+          aria-label="Delete payment method"
+        >
+          <i data-lucide="trash-2"></i>
+        </button>
+      </div>
+    `;
+
+        paymentMethodList.appendChild(item);
+      });
+    }
+
+    const currencies = getCurrencyOptions();
+
+    if (currencies.length === 0) {
+      currencyList.innerHTML = `
+    <div class="settings-empty">No currencies yet.</div>
+  `;
+    } else {
+      currencies.forEach((currency) => {
+        const item = document.createElement("div");
+        item.className = "settings-item";
+
+        item.innerHTML = `
+      <div class="settings-item-main">
+        <strong>${currency.code} - ${currency.name}</strong>
+        <span class="currency-rate-text">
+          1 ${currency.code} = HK$${Number(currency.rateToHKD).toLocaleString(
+            "en-US",
+            {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 6,
+            },
+          )}
+        </span>
+      </div>
+
+      <div class="action-buttons">
+        <button
+          class="edit-transaction-btn edit-currency-btn"
+          data-id="${currency.id}"
+          type="button"
+          aria-label="Edit currency"
+        >
+          <i data-lucide="pencil"></i>
+        </button>
+
+        <button
+          class="delete-transaction-btn delete-currency-btn"
+          data-id="${currency.id}"
+          type="button"
+          aria-label="Delete currency"
+        >
+          <i data-lucide="trash-2"></i>
+        </button>
+      </div>
+    `;
+
+        currencyList.appendChild(item);
+      });
+    }
+
     if (window.lucide) {
       lucide.createIcons();
     }
@@ -5229,12 +6265,71 @@ document.addEventListener("DOMContentLoaded", () => {
     populateTransactionDropdowns();
   }
 
+  function addPaymentMethod(name, type) {
+    const trimmedName = name.trim();
+
+    if (!trimmedName) return;
+
+    const alreadyExists = (settings.paymentMethods || []).some(
+      (paymentMethod) => {
+        return paymentMethod.name.toLowerCase() === trimmedName.toLowerCase();
+      },
+    );
+
+    if (alreadyExists) {
+      alert("This payment method already exists.");
+      return;
+    }
+
+    const newPaymentMethod = {
+      id: createId(),
+      name: trimmedName,
+      type,
+    };
+
+    if (!settings.paymentMethods) {
+      settings.paymentMethods = [];
+    }
+
+    settings.paymentMethods.push(newPaymentMethod);
+
+    saveSettings();
+    renderSettings();
+    populateTransactionDropdowns();
+
+    syncPaymentMethodSettingToCloud(newPaymentMethod);
+  }
+
   function getCategoryById(categoryId) {
     return settings.categories.find((category) => category.id === categoryId);
   }
 
   function getAccountById(accountId) {
     return settings.accounts.find((account) => account.id === accountId);
+  }
+
+  function getPaymentMethodById(paymentMethodId) {
+    return (settings.paymentMethods || []).find((paymentMethod) => {
+      return paymentMethod.id === paymentMethodId;
+    });
+  }
+
+  function countTransactionsByPaymentMethod(paymentMethodName) {
+    return transactions.filter((transaction) => {
+      return transaction.paymentMethod === paymentMethodName;
+    }).length;
+  }
+
+  function syncPaymentMethodSettingToCloud(paymentMethod) {
+    if (typeof upsertSettingItemToCloud === "function") {
+      upsertSettingItemToCloud("payment_method", paymentMethod);
+    }
+  }
+
+  function deletePaymentMethodSettingFromCloud(paymentMethodId) {
+    if (typeof deleteSettingItemFromCloud === "function") {
+      deleteSettingItemFromCloud("payment_method", paymentMethodId);
+    }
   }
 
   function countTransactionsByCategory(categoryName) {
@@ -5503,6 +6598,272 @@ document.addEventListener("DOMContentLoaded", () => {
     );
 
     deleteSettingItemFromCloud("account", accountId);
+  }
+
+  function editPaymentMethod(paymentMethodId) {
+    const paymentMethod = getPaymentMethodById(paymentMethodId);
+
+    if (!paymentMethod) return;
+
+    const newName = prompt(
+      "Enter the new payment method name:",
+      paymentMethod.name,
+    );
+
+    if (newName === null) return;
+
+    const trimmedName = newName.trim();
+
+    if (!trimmedName) {
+      showToast("Payment method name cannot be empty.", "error");
+      return;
+    }
+
+    const duplicatedPaymentMethod = (settings.paymentMethods || []).some(
+      (item) => {
+        return (
+          item.id !== paymentMethodId &&
+          item.name.toLowerCase() === trimmedName.toLowerCase()
+        );
+      },
+    );
+
+    if (duplicatedPaymentMethod) {
+      showToast(
+        "This payment method already exists. Please use another name.",
+        "error",
+      );
+      return;
+    }
+
+    const oldName = paymentMethod.name;
+    let updatedPaymentMethod = null;
+
+    settings.paymentMethods = settings.paymentMethods.map((item) => {
+      if (item.id === paymentMethodId) {
+        updatedPaymentMethod = {
+          ...item,
+          name: trimmedName,
+        };
+
+        return updatedPaymentMethod;
+      }
+
+      return item;
+    });
+
+    transactions = transactions.map((transaction) => {
+      if (transaction.paymentMethod === oldName) {
+        return {
+          ...transaction,
+          paymentMethod: trimmedName,
+        };
+      }
+
+      return transaction;
+    });
+
+    saveSettings();
+    saveTransactions();
+
+    renderSettings();
+    populateTransactionDropdowns();
+    renderTransactions();
+
+    if (updatedPaymentMethod) {
+      syncPaymentMethodSettingToCloud(updatedPaymentMethod);
+    }
+
+    if (typeof replaceCloudTransactionsSilently === "function") {
+      replaceCloudTransactionsSilently();
+    }
+
+    showToast(`Payment method renamed to "${trimmedName}".`, "success");
+  }
+
+  function deletePaymentMethod(paymentMethodId) {
+    const paymentMethod = getPaymentMethodById(paymentMethodId);
+
+    if (!paymentMethod) return;
+
+    const usedCount = countTransactionsByPaymentMethod(paymentMethod.name);
+
+    if (usedCount > 0) {
+      showToast(
+        `This payment method cannot be deleted because it is used by ${usedCount} transaction(s).`,
+        "warning",
+      );
+      return;
+    }
+
+    const confirmed = confirm(
+      `Are you sure you want to delete the payment method "${paymentMethod.name}"?`,
+    );
+
+    if (!confirmed) return;
+
+    const deletedPaymentMethodName = paymentMethod.name;
+
+    settings.paymentMethods = settings.paymentMethods.filter((item) => {
+      return item.id !== paymentMethodId;
+    });
+
+    saveSettings();
+    renderSettings();
+    populateTransactionDropdowns();
+
+    deletePaymentMethodSettingFromCloud(paymentMethodId);
+
+    showToast(
+      `Payment method "${deletedPaymentMethodName}" deleted successfully.`,
+      "success",
+    );
+  }
+
+  function getCurrencyById(currencyId) {
+    return getCurrencyOptions().find((currency) => {
+      return currency.id === currencyId;
+    });
+  }
+
+  function countTransactionsByCurrency(currencyCode) {
+    return transactions.filter((transaction) => {
+      return transaction.currency === currencyCode;
+    }).length;
+  }
+
+  function syncCurrencySettingToCloud(currency) {
+    if (typeof upsertSettingItemToCloud === "function") {
+      upsertSettingItemToCloud("currency", {
+        id: currency.id,
+        name: currency.code,
+        type: currency.name,
+        numericValue: currency.rateToHKD,
+      });
+    }
+  }
+
+  function deleteCurrencySettingFromCloud(currencyId) {
+    if (typeof deleteSettingItemFromCloud === "function") {
+      deleteSettingItemFromCloud("currency", currencyId);
+    }
+  }
+
+  function addCurrency(currencyData) {
+    const newCurrency = normalizeCurrency({
+      id: createId(),
+      ...currencyData,
+    });
+
+    if (!settings.currencies) {
+      settings.currencies = [];
+    }
+
+    settings.currencies.push(newCurrency);
+
+    saveSettings();
+    renderSettings();
+    populateTransactionDropdowns();
+
+    syncCurrencySettingToCloud(newCurrency);
+
+    showToast(`Currency "${newCurrency.code}" added successfully.`, "success");
+  }
+
+  function editCurrency(currencyId) {
+    const currency = getCurrencyById(currencyId);
+
+    if (!currency) return;
+
+    const newName = prompt("Enter the currency name:", currency.name);
+
+    if (newName === null) return;
+
+    const trimmedName = newName.trim();
+
+    if (!trimmedName) {
+      showToast("Currency name cannot be empty.", "error");
+      return;
+    }
+
+    const newRateText = prompt(
+      `Enter exchange rate to HKD for ${currency.code}:`,
+      String(currency.rateToHKD),
+    );
+
+    if (newRateText === null) return;
+
+    const newRate = Number(newRateText);
+
+    if (!Number.isFinite(newRate) || newRate <= 0) {
+      showToast("Exchange rate must be greater than 0.", "error");
+      return;
+    }
+
+    let updatedCurrency = null;
+
+    settings.currencies = getCurrencyOptions().map((item) => {
+      if (item.id === currencyId) {
+        updatedCurrency = normalizeCurrency({
+          ...item,
+          name: trimmedName,
+          rateToHKD: newRate,
+        });
+
+        return updatedCurrency;
+      }
+
+      return item;
+    });
+
+    saveSettings();
+    renderSettings();
+    populateTransactionDropdowns();
+
+    if (updatedCurrency) {
+      syncCurrencySettingToCloud(updatedCurrency);
+    }
+
+    showToast(`Currency "${currency.code}" updated successfully.`, "success");
+  }
+
+  function deleteCurrency(currencyId) {
+    const currency = getCurrencyById(currencyId);
+
+    if (!currency) return;
+
+    if (currency.code === "HKD") {
+      showToast("HKD is the base currency and cannot be deleted.", "warning");
+      return;
+    }
+
+    const usedCount = countTransactionsByCurrency(currency.code);
+
+    if (usedCount > 0) {
+      showToast(
+        `This currency cannot be deleted because it is used by ${usedCount} transaction(s).`,
+        "warning",
+      );
+      return;
+    }
+
+    const confirmed = confirm(
+      `Are you sure you want to delete the currency "${currency.code}"?`,
+    );
+
+    if (!confirmed) return;
+
+    settings.currencies = getCurrencyOptions().filter((item) => {
+      return item.id !== currencyId;
+    });
+
+    saveSettings();
+    renderSettings();
+    populateTransactionDropdowns();
+
+    deleteCurrencySettingFromCloud(currencyId);
+
+    showToast(`Currency "${currency.code}" deleted successfully.`, "success");
   }
 
   function calculateNetWorthSummary() {
@@ -7099,6 +8460,37 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  const transactionOriginalAmountInput = document.getElementById(
+    "transactionOriginalAmount",
+  );
+  const transactionCurrencyInput = document.getElementById(
+    "transactionCurrency",
+  );
+  const transactionExchangeRateInput = document.getElementById(
+    "transactionExchangeRate",
+  );
+
+  if (transactionOriginalAmountInput) {
+    transactionOriginalAmountInput.addEventListener(
+      "input",
+      updateTransactionConvertedAmount,
+    );
+  }
+
+  if (transactionCurrencyInput) {
+    transactionCurrencyInput.addEventListener("change", () => {
+      applySelectedCurrencyRate();
+      updateTransactionConvertedAmount();
+    });
+  }
+
+  if (transactionExchangeRateInput) {
+    transactionExchangeRateInput.addEventListener(
+      "input",
+      updateTransactionConvertedAmount,
+    );
+  }
+
   if (transactionForm) {
     transactionForm.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -7166,6 +8558,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const typeFilter = document.getElementById("typeFilter");
   const statusFilter = document.getElementById("statusFilter");
+  const currencyFilter = document.getElementById("currencyFilter");
+  const paymentMethodFilter = document.getElementById("paymentMethodFilter");
   const monthFilter = document.getElementById("monthFilter");
   const clearTransactionFiltersBtn = document.getElementById(
     "clearTransactionFiltersBtn",
@@ -7187,6 +8581,14 @@ document.addEventListener("DOMContentLoaded", () => {
     statusFilter.addEventListener("change", filterTransactions);
   }
 
+  if (currencyFilter) {
+    currencyFilter.addEventListener("change", filterTransactions);
+  }
+
+  if (paymentMethodFilter) {
+    paymentMethodFilter.addEventListener("change", filterTransactions);
+  }
+
   if (monthFilter) {
     monthFilter.addEventListener("change", filterTransactions);
   }
@@ -7197,6 +8599,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (categoryFilter) categoryFilter.value = "All Categories";
       if (typeFilter) typeFilter.value = "All Types";
       if (statusFilter) statusFilter.value = "All Statuses";
+      if (currencyFilter) currencyFilter.value = "All Currencies";
+      if (paymentMethodFilter)
+        paymentMethodFilter.value = "All Payment Methods";
       if (monthFilter) monthFilter.value = "All Months";
 
       filterTransactions();
@@ -7871,6 +9276,16 @@ document.addEventListener("DOMContentLoaded", () => {
     "subscriptionTableBody",
   );
 
+  const subscriptionOriginalFeeInput = document.getElementById(
+    "subscriptionOriginalFee",
+  );
+  const subscriptionCurrencyInput = document.getElementById(
+    "subscriptionCurrency",
+  );
+  const subscriptionExchangeRateInput = document.getElementById(
+    "subscriptionExchangeRate",
+  );
+
   if (openSubscriptionModalBtn) {
     openSubscriptionModalBtn.addEventListener("click", openSubscriptionModal);
   }
@@ -7892,6 +9307,27 @@ document.addEventListener("DOMContentLoaded", () => {
         closeSubscriptionModal();
       }
     });
+  }
+
+  if (subscriptionOriginalFeeInput) {
+    subscriptionOriginalFeeInput.addEventListener(
+      "input",
+      updateSubscriptionConvertedFee,
+    );
+  }
+
+  if (subscriptionCurrencyInput) {
+    subscriptionCurrencyInput.addEventListener("change", () => {
+      applySelectedSubscriptionCurrencyRate();
+      updateSubscriptionConvertedFee();
+    });
+  }
+
+  if (subscriptionExchangeRateInput) {
+    subscriptionExchangeRateInput.addEventListener(
+      "input",
+      updateSubscriptionConvertedFee,
+    );
   }
 
   if (subscriptionForm) {
@@ -7968,10 +9404,83 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  const SETTINGS_VIEW_STORAGE_KEY = "permissionToSaveSettingsView";
+
+  const settingsGrid = document.getElementById("settingsGrid");
+  const settingsViewButtons = document.querySelectorAll(".settings-view-btn");
+  const settingsPanels = document.querySelectorAll(".settings-panel");
+
+  function getSavedSettingsView() {
+    return localStorage.getItem(SETTINGS_VIEW_STORAGE_KEY) || "all";
+  }
+
+  function saveSettingsView(view) {
+    localStorage.setItem(SETTINGS_VIEW_STORAGE_KEY, view);
+  }
+
+  function getAvailableSettingsViews() {
+    return Array.from(settingsViewButtons).map((button) => {
+      return button.dataset.settingsView;
+    });
+  }
+
+  function setSettingsView(view) {
+    if (
+      !settingsGrid ||
+      !settingsPanels.length ||
+      !settingsViewButtons.length
+    ) {
+      return;
+    }
+
+    const availableViews = getAvailableSettingsViews();
+    const activeView = availableViews.includes(view) ? view : "all";
+
+    saveSettingsView(activeView);
+
+    settingsViewButtons.forEach((button) => {
+      const isActive = button.dataset.settingsView === activeView;
+      button.classList.toggle("active", isActive);
+    });
+
+    if (activeView === "all") {
+      settingsGrid.classList.remove("settings-single-view");
+
+      settingsPanels.forEach((panel) => {
+        panel.classList.add("is-visible");
+      });
+
+      return;
+    }
+
+    settingsGrid.classList.add("settings-single-view");
+
+    settingsPanels.forEach((panel) => {
+      const shouldShow = panel.dataset.settingsPanel === activeView;
+      panel.classList.toggle("is-visible", shouldShow);
+    });
+  }
+
+  if (settingsViewButtons.length) {
+    settingsViewButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const selectedView = button.dataset.settingsView || "all";
+        setSettingsView(selectedView);
+      });
+    });
+  }
+
+  /* 重新載入頁面時，顯示上次選擇的 Settings tab */
+  setSettingsView(getSavedSettingsView());
+
   const categoryForm = document.getElementById("categoryForm");
   const accountForm = document.getElementById("accountForm");
   const categoryList = document.getElementById("categoryList");
   const accountList = document.getElementById("accountList");
+  const paymentMethodForm = document.getElementById("paymentMethodForm");
+  const paymentMethodList = document.getElementById("paymentMethodList");
+  const currencyList = document.getElementById("currencyList");
+  const currencyForm = document.getElementById("currencyForm");
 
   if (categoryForm) {
     categoryForm.addEventListener("submit", (event) => {
@@ -8029,6 +9538,38 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  if (paymentMethodForm) {
+    paymentMethodForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+
+      const formData = validatePaymentMethodForm();
+
+      if (!formData) return;
+
+      addPaymentMethod(formData.name, formData.type);
+
+      clearFormError(paymentMethodForm);
+      paymentMethodForm.reset();
+
+      showToast("Payment method added successfully.", "success");
+    });
+  }
+
+  if (currencyForm) {
+    currencyForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+
+      const formData = validateCurrencyForm();
+
+      if (!formData) return;
+
+      addCurrency(formData);
+
+      clearFormError(currencyForm);
+      currencyForm.reset();
+    });
+  }
+
   if (categoryList) {
     categoryList.addEventListener("click", (event) => {
       const editButton = event.target.closest(".edit-category-btn");
@@ -8059,6 +9600,40 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (deleteButton) {
         deleteAccount(deleteButton.dataset.id);
+      }
+    });
+  }
+
+  if (paymentMethodList) {
+    paymentMethodList.addEventListener("click", (event) => {
+      const editButton = event.target.closest(".edit-payment-method-btn");
+
+      if (editButton) {
+        editPaymentMethod(editButton.dataset.id);
+        return;
+      }
+
+      const deleteButton = event.target.closest(".delete-payment-method-btn");
+
+      if (deleteButton) {
+        deletePaymentMethod(deleteButton.dataset.id);
+      }
+    });
+  }
+
+  if (currencyList) {
+    currencyList.addEventListener("click", (event) => {
+      const editButton = event.target.closest(".edit-currency-btn");
+
+      if (editButton) {
+        editCurrency(editButton.dataset.id);
+        return;
+      }
+
+      const deleteButton = event.target.closest(".delete-currency-btn");
+
+      if (deleteButton) {
+        deleteCurrency(deleteButton.dataset.id);
       }
     });
   }
