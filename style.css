@@ -4193,3 +4193,119 @@ body.dark-mode #subscriptionFee[readonly] {
     width: 100%;
   }
 }
+
+/* ACCOUNT BALANCE */
+.account-balance-meta {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.account-balance-current {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.account-balance-current.positive {
+  color: var(--green);
+}
+
+.account-balance-current.negative {
+  color: var(--red);
+}
+
+body.dark-mode .account-balance-meta {
+  color: #a3a3b5;
+}
+
+/* ACCOUNT BALANCE SUMMARY CARD */
+.account-balance-summary-card {
+  overflow: hidden;
+}
+
+.account-summary-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #f3f0ff, #ffffff);
+  border: 1px solid var(--line);
+  margin-bottom: 18px;
+}
+
+.account-summary-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.account-summary-hero strong {
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--primary-dark);
+  letter-spacing: -0.04em;
+}
+
+.account-summary-hero strong.negative-balance,
+.account-summary-item strong.negative-balance {
+  color: var(--red);
+}
+
+.account-summary-hero strong.positive-balance,
+.account-summary-item strong.positive-balance {
+  color: var(--green);
+}
+
+.account-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.account-summary-item {
+  padding: 14px;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  min-width: 0;
+}
+
+.account-summary-item span {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.account-summary-item strong {
+  display: block;
+  font-size: 17px;
+  font-weight: 900;
+  color: var(--text);
+  word-break: break-word;
+}
+
+body.dark-mode .account-summary-hero {
+  background: linear-gradient(135deg, #17132a, #12121d);
+}
+
+body.dark-mode .account-summary-item {
+  background: #12121d;
+}
+
+@media (max-width: 900px) {
+  .account-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .account-summary-hero strong {
+    font-size: 26px;
+  }
+}

@@ -409,6 +409,55 @@
                 </div>
               </article>
 
+              <article class="card account-balance-summary-card">
+                <div class="card-header">
+                  <div>
+                    <h3>Account Balance Summary</h3>
+                    <p class="section-note">
+                      Current balance calculated from opening balances and
+                      completed transactions.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="account-summary-hero">
+                  <span class="account-summary-label">Net Liquid Balance</span>
+                  <strong id="dashboardNetLiquidBalance">HK$0</strong>
+                </div>
+
+                <div class="account-summary-grid">
+                  <div class="account-summary-item">
+                    <span>Liquid Assets</span>
+                    <strong id="dashboardLiquidAssets">HK$0</strong>
+                  </div>
+
+                  <div class="account-summary-item">
+                    <span>Credit Card Outstanding</span>
+                    <strong id="dashboardCreditCardOutstanding">HK$0</strong>
+                  </div>
+
+                  <div class="account-summary-item">
+                    <span>Bank</span>
+                    <strong id="dashboardBankBalance">HK$0</strong>
+                  </div>
+
+                  <div class="account-summary-item">
+                    <span>Cash</span>
+                    <strong id="dashboardCashBalance">HK$0</strong>
+                  </div>
+
+                  <div class="account-summary-item">
+                    <span>E-Wallet</span>
+                    <strong id="dashboardEWalletBalance">HK$0</strong>
+                  </div>
+
+                  <div class="account-summary-item">
+                    <span>Other Accounts</span>
+                    <strong id="dashboardOtherAccountBalance">HK$0</strong>
+                  </div>
+                </div>
+              </article>
+
               <!-- RECENT TRANSACTIONS -->
               <article class="card table-card">
                 <div class="card-header">
@@ -719,6 +768,8 @@
                       <select id="transactionType" required>
                         <option value="Income">Income</option>
                         <option value="Expense">Expense</option>
+                        <option value="Investment">Investment</option>
+                        <option value="Transfer">Transfer</option>
                       </select>
                     </div>
 
@@ -744,7 +795,10 @@
                       </select>
                     </div>
 
-                    <div class="form-field">
+                    <div
+                      class="form-field normal-transaction-field"
+                      id="transactionAccountField"
+                    >
                       <label for="transactionAccount">Account</label>
                       <select id="transactionAccount" required>
                         <option value="Bank">Bank</option>
@@ -752,6 +806,16 @@
                         <option value="Octopus">Octopus</option>
                         <option value="Cash">Cash</option>
                       </select>
+                    </div>
+
+                    <div class="form-field transfer-transaction-field hidden">
+                      <label for="transactionFromAccount">From Account</label>
+                      <select id="transactionFromAccount"></select>
+                    </div>
+
+                    <div class="form-field transfer-transaction-field hidden">
+                      <label for="transactionToAccount">To Account</label>
+                      <select id="transactionToAccount"></select>
                     </div>
 
                     <div class="form-field">
@@ -1672,6 +1736,19 @@
                       <option value="E-Wallet">E-Wallet</option>
                       <option value="Cash">Cash</option>
                     </select>
+                  </div>
+
+                  <div class="form-field">
+                    <label for="accountOpeningBalance"
+                      >Opening Balance HKD</label
+                    >
+                    <input
+                      type="number"
+                      id="accountOpeningBalance"
+                      step="0.01"
+                      value="0"
+                      placeholder="e.g. 10000"
+                    />
                   </div>
 
                   <button type="submit" class="primary-btn">

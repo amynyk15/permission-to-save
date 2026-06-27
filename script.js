@@ -490,6 +490,8 @@ document.addEventListener("DOMContentLoaded", () => {
       description: transaction.description,
       category: transaction.category,
       account: transaction.account,
+      from_account: transaction.fromAccount || null,
+      to_account: transaction.toAccount || null,
       amount: Number(transaction.amount),
       original_amount: Number(transaction.originalAmount ?? transaction.amount),
       currency: transaction.currency || "HKD",
@@ -510,6 +512,8 @@ document.addEventListener("DOMContentLoaded", () => {
       description: row.description,
       category: row.category,
       account: row.account,
+      fromAccount: row.from_account || "",
+      toAccount: row.to_account || "",
       amount: Number(row.amount),
       originalAmount: Number(row.original_amount ?? row.amount),
       currency: row.currency || "HKD",
@@ -1170,6 +1174,7 @@ document.addEventListener("DOMContentLoaded", () => {
       local_id: account.id,
       name: account.name,
       value_type: account.type,
+      numeric_value: Number(account.openingBalance || 0),
     }));
 
     const paymentMethodRows = (settings.paymentMethods || []).map(
@@ -1215,11 +1220,14 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (row.item_type === "account") {
-        accounts.push({
-          id: row.local_id || row.id,
-          name: row.name,
-          type: row.value_type,
-        });
+        accounts.push(
+          normalizeAccount({
+            id: row.local_id || row.id,
+            name: row.name,
+            type: row.value_type,
+            openingBalance: Number(row.numeric_value || 0),
+          }),
+        );
       }
 
       if (row.item_type === "payment_method") {
@@ -1359,7 +1367,7 @@ document.addEventListener("DOMContentLoaded", () => {
       local_id: item.id,
       name: item.name,
       value_type: item.type,
-      numeric_value: item.numericValue ?? null,
+      numeric_value: item.numericValue ?? item.openingBalance ?? null,
     };
   }
 
@@ -2272,6 +2280,8 @@ document.addEventListener("DOMContentLoaded", () => {
       ...transaction,
       id: transaction.id || createId(),
       currency,
+      fromAccount: transaction.fromAccount || transaction.from_account || "",
+      toAccount: transaction.toAccount || transaction.to_account || "",
       originalAmount: Number.isFinite(originalAmount) ? originalAmount : amount,
       exchangeRate:
         Number.isFinite(exchangeRate) && exchangeRate > 0 ? exchangeRate : 1,
@@ -2468,13 +2478,100 @@ document.addEventListener("DOMContentLoaded", () => {
     amountInput.value = (originalAmount * finalRate).toFixed(2);
   }
 
+  function updateTransactionTypeFields() {
+    const transactionTypeInput = document.getElementById("transactionType");
+    const transactionCategoryField = document
+      .getElementById("transactionCategory")
+      ?.closest(".form-field");
+    const transactionAccountField = document.getElementById(
+      "transactionAccountField",
+    );
+
+    const normalFields = document.querySelectorAll(".normal-transaction-field");
+    const transferFields = document.querySelectorAll(
+      ".transfer-transaction-field",
+    );
+
+    const selectedType = transactionTypeInput
+      ? transactionTypeInput.value
+      : "Expense";
+
+    const isTransfer = selectedType === "Transfer";
+
+    normalFields.forEach((field) => {
+      field.classList.toggle("hidden", isTransfer);
+    });
+
+    transferFields.forEach((field) => {
+      field.classList.toggle("hidden", !isTransfer);
+    });
+
+    if (transactionCategoryField) {
+      transactionCategoryField.classList.toggle("hidden", isTransfer);
+    }
+
+    if (transactionAccountField) {
+      transactionAccountField.classList.toggle("hidden", isTransfer);
+    }
+  }
+
   function getTransactionMonth(dateString) {
     if (!dateString) return "";
     return dateString.slice(0, 7);
   }
 
+  function isCompletedTransaction(transaction) {
+    return transaction.status === "Completed";
+  }
+
+  function isTransferTransaction(transaction) {
+    return transaction.type === "Transfer";
+  }
+
+  function shouldIncludeInReports(transaction) {
+    return (
+      isCompletedTransaction(transaction) && !isTransferTransaction(transaction)
+    );
+  }
+
+  function isIncomeFlow(transaction) {
+    return shouldIncludeInReports(transaction) && transaction.type === "Income";
+  }
+
+  function isExpenseFlow(transaction) {
+    return (
+      shouldIncludeInReports(transaction) &&
+      transaction.type === "Expense" &&
+      transaction.category !== "Investment"
+    );
+  }
+
+  function isInvestmentFlow(transaction) {
+    return (
+      shouldIncludeInReports(transaction) &&
+      (transaction.type === "Investment" ||
+        (transaction.type === "Expense" &&
+          transaction.category === "Investment"))
+    );
+  }
+
   function getBadgeClass(value) {
     return String(value).toLowerCase().replace(/\s+/g, "-");
+  }
+
+  function normalizeAccount(account) {
+    const openingBalance = Number(
+      account.openingBalance ??
+        account.opening_balance ??
+        account.numeric_value ??
+        0,
+    );
+
+    return {
+      ...account,
+      id: account.id || createId(),
+      openingBalance: Number.isFinite(openingBalance) ? openingBalance : 0,
+    };
   }
 
   function getTransactionDetailMetaHtml(transaction) {
@@ -2623,10 +2720,7 @@ document.addEventListener("DOMContentLoaded", () => {
           id: category.id || createId(),
         })),
 
-        accounts: (parsedSettings.accounts || []).map((account) => ({
-          ...account,
-          id: account.id || createId(),
-        })),
+        accounts: (parsedSettings.accounts || []).map(normalizeAccount),
 
         paymentMethods: (
           parsedSettings.paymentMethods ||
@@ -2645,7 +2739,10 @@ document.addEventListener("DOMContentLoaded", () => {
       };
     }
 
-    return defaultSettings;
+    return {
+      ...defaultSettings,
+      accounts: defaultSettings.accounts.map(normalizeAccount),
+    };
   }
 
   function saveSettings() {
@@ -2916,6 +3013,12 @@ document.addEventListener("DOMContentLoaded", () => {
     );
     const transactionAccountSelect =
       document.getElementById("transactionAccount");
+    const transactionFromAccountSelect = document.getElementById(
+      "transactionFromAccount",
+    );
+    const transactionToAccountSelect = document.getElementById(
+      "transactionToAccount",
+    );
     const transactionPaymentMethodSelect = document.getElementById(
       "transactionPaymentMethod",
     );
@@ -2972,6 +3075,14 @@ document.addEventListener("DOMContentLoaded", () => {
     );
 
     populateSelectOptions(
+      transactionFromAccountSelect,
+      accountOptions,
+      preserveAccount ? currentAccount : "",
+    );
+
+    populateSelectOptions(transactionToAccountSelect, accountOptions, "");
+
+    populateSelectOptions(
       transactionPaymentMethodSelect,
       paymentMethodOptions,
       preservePaymentMethod ? currentPaymentMethod : "",
@@ -3016,6 +3127,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const descriptionInput = document.getElementById("transactionDescription");
     const categoryInput = document.getElementById("transactionCategory");
     const accountInput = document.getElementById("transactionAccount");
+    const fromAccountInput = document.getElementById("transactionFromAccount");
+    const toAccountInput = document.getElementById("transactionToAccount");
     const paymentMethodInput = document.getElementById(
       "transactionPaymentMethod",
     );
@@ -3037,6 +3150,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const description = getTrimmedInputValue(descriptionInput);
     const category = getTrimmedInputValue(categoryInput);
     const account = getTrimmedInputValue(accountInput);
+    const fromAccount = getTrimmedInputValue(fromAccountInput);
+    const toAccount = getTrimmedInputValue(toAccountInput);
     const paymentMethod =
       getTrimmedInputValue(paymentMethodInput) || "Not specified";
     const notes = getTrimmedInputValue(notesInput);
@@ -3082,7 +3197,34 @@ document.addEventListener("DOMContentLoaded", () => {
       return null;
     }
 
-    if (!account) {
+    if (type === "Transfer") {
+      if (!fromAccount) {
+        showFormError(
+          transactionForm,
+          "Please select the account to transfer from.",
+          fromAccountInput,
+        );
+        return null;
+      }
+
+      if (!toAccount) {
+        showFormError(
+          transactionForm,
+          "Please select the account to transfer to.",
+          toAccountInput,
+        );
+        return null;
+      }
+
+      if (fromAccount === toAccount) {
+        showFormError(
+          transactionForm,
+          "From Account and To Account cannot be the same.",
+          toAccountInput,
+        );
+        return null;
+      }
+    } else if (!account) {
       showFormError(transactionForm, "Please select an account.", accountInput);
       return null;
     }
@@ -3141,8 +3283,10 @@ document.addEventListener("DOMContentLoaded", () => {
       date,
       type,
       description,
-      category,
-      account,
+      category: type === "Transfer" ? "Transfer" : category,
+      account: type === "Transfer" ? fromAccount : account,
+      fromAccount: type === "Transfer" ? fromAccount : "",
+      toAccount: type === "Transfer" ? toAccount : "",
       amount,
       originalAmount,
       currency,
@@ -3170,6 +3314,7 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
       updateTransactionSummary();
+      renderSettings();
       populateTransactionMonthFilter();
       populateTransactionCurrencyFilter();
       populateTransactionPaymentMethodFilter();
@@ -3208,7 +3353,15 @@ document.addEventListener("DOMContentLoaded", () => {
 </td>
         <td><span class="tag ${typeTagClass}">${transaction.type}</span></td>
         <td>${transaction.category}</td>
-        <td>${transaction.account}</td>
+        <td>
+  ${
+    transaction.type === "Transfer"
+      ? `${transaction.fromAccount || transaction.account} → ${
+          transaction.toAccount || "-"
+        }`
+      : transaction.account
+  }
+</td>
         <td class="${amountClass}">
   <strong>${formatHKD(transaction.amount)}</strong>
   ${getTransactionOriginalAmountHtml(transaction)}
@@ -3231,6 +3384,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     updateTransactionSummary();
+    renderSettings();
     populateTransactionMonthFilter();
     populateTransactionCurrencyFilter();
     populateTransactionPaymentMethodFilter();
@@ -3256,8 +3410,9 @@ document.addEventListener("DOMContentLoaded", () => {
       !summaryExpense ||
       !summaryCompleted ||
       !summaryPending
-    )
+    ) {
       return;
+    }
 
     let totalIncome = 0;
     let totalExpense = 0;
@@ -3265,20 +3420,24 @@ document.addEventListener("DOMContentLoaded", () => {
     let pendingCount = 0;
 
     transactions.forEach((transaction) => {
-      if (transaction.type === "Income") {
-        totalIncome += Number(transaction.amount);
-      }
-
-      if (transaction.type === "Expense") {
-        totalExpense += Number(transaction.amount);
-      }
-
       if (transaction.status === "Completed") {
         completedCount += 1;
       }
 
       if (transaction.status === "Pending") {
         pendingCount += 1;
+      }
+
+      if (isTransferTransaction(transaction)) {
+        return;
+      }
+
+      if (isIncomeFlow(transaction)) {
+        totalIncome += Number(transaction.amount) || 0;
+      }
+
+      if (isExpenseFlow(transaction)) {
+        totalExpense += Number(transaction.amount) || 0;
       }
     });
 
@@ -3539,6 +3698,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     editingTransactionId = null;
     setModalMode("add");
+    updateTransactionTypeFields();
     transactionForm.reset();
 
     const originalAmountInput = document.getElementById(
@@ -3595,6 +3755,19 @@ document.addEventListener("DOMContentLoaded", () => {
       transaction.description;
     document.getElementById("transactionCategory").value = transaction.category;
     document.getElementById("transactionAccount").value = transaction.account;
+    const fromAccountInput = document.getElementById("transactionFromAccount");
+    const toAccountInput = document.getElementById("transactionToAccount");
+
+    if (fromAccountInput) {
+      fromAccountInput.value =
+        transaction.fromAccount || transaction.account || "";
+    }
+
+    if (toAccountInput) {
+      toAccountInput.value = transaction.toAccount || "";
+    }
+
+    updateTransactionTypeFields();
     document.getElementById("transactionPaymentMethod").value =
       transaction.paymentMethod || "Not specified";
 
@@ -3706,25 +3879,19 @@ document.addEventListener("DOMContentLoaded", () => {
       const transactionMonth = getTransactionMonth(transaction.date);
 
       if (transactionMonth !== month) return;
-      if (transaction.status !== "Completed") return;
+      if (!shouldIncludeInReports(transaction)) return;
 
-      const amount = Number(transaction.amount);
+      const amount = Number(transaction.amount) || 0;
 
-      if (transaction.type === "Income") {
+      if (isIncomeFlow(transaction)) {
         income += amount;
       }
 
-      if (
-        transaction.type === "Expense" &&
-        transaction.category !== "Investment"
-      ) {
+      if (isExpenseFlow(transaction)) {
         expense += amount;
       }
 
-      if (
-        transaction.type === "Expense" &&
-        transaction.category === "Investment"
-      ) {
+      if (isInvestmentFlow(transaction)) {
         investment += amount;
       }
     });
@@ -4015,6 +4182,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderDashboardSubscriptions();
     renderDashboardNetWorthSummary();
     renderDashboardInvestmentSummary();
+    renderAccountBalanceSummary();
   }
 
   function renderDashboardRecentTransactions() {
@@ -4739,8 +4907,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const transactionMonth = getTransactionMonth(transaction.date);
 
       if (transactionMonth !== month) return;
-      if (transaction.status !== "Completed") return;
-      if (transaction.type !== "Expense") return;
+      if (!isExpenseFlow(transaction)) return;
 
       const category = transaction.category || "Others";
 
@@ -4748,7 +4915,7 @@ document.addEventListener("DOMContentLoaded", () => {
         actualMap[category] = 0;
       }
 
-      actualMap[category] += Number(transaction.amount);
+      actualMap[category] += Number(transaction.amount) || 0;
     });
 
     return actualMap;
@@ -5863,12 +6030,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const accountForm = document.getElementById("accountForm");
 
     const accountNameInput = document.getElementById("accountName");
+
+    const accountOpeningBalanceInput = document.getElementById(
+      "accountOpeningBalance",
+    );
+
     const accountTypeInput = document.getElementById("accountType");
 
     clearFormError(accountForm);
 
     const name = getTrimmedInputValue(accountNameInput);
     const type = getTrimmedInputValue(accountTypeInput);
+
+    const openingBalance = Number(accountOpeningBalanceInput?.value || 0);
 
     if (!name) {
       showFormError(
@@ -5884,6 +6058,15 @@ document.addEventListener("DOMContentLoaded", () => {
         accountForm,
         "Please select an account type.",
         accountTypeInput,
+      );
+      return null;
+    }
+
+    if (!Number.isFinite(openingBalance)) {
+      showFormError(
+        accountForm,
+        "Opening balance must be a valid number.",
+        accountOpeningBalanceInput,
       );
       return null;
     }
@@ -5904,6 +6087,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return {
       name,
       type,
+      openingBalance,
     };
   }
 
@@ -6085,12 +6269,20 @@ document.addEventListener("DOMContentLoaded", () => {
         item.className = "settings-item";
 
         const badgeClass = getBadgeClass(account.type);
+        const currentBalance = getAccountBalance(account.name);
+        const balanceClass = currentBalance >= 0 ? "positive" : "negative";
 
         item.innerHTML = `
           <div class="settings-item-main">
-            <strong>${account.name}</strong>
-            <span class="settings-badge ${badgeClass}">${account.type}</span>
-          </div>
+  <strong>${account.name}</strong>
+  <span class="settings-badge ${badgeClass}">${account.type}</span>
+  <span class="account-balance-meta">
+    Opening: ${formatHKD(account.openingBalance || 0)}
+  </span>
+  <span class="account-balance-current ${balanceClass}">
+    Current: ${formatHKD(currentBalance)}
+  </span>
+</div>
 
           <div class="action-buttons">
   <button
@@ -6263,6 +6455,7 @@ document.addEventListener("DOMContentLoaded", () => {
     saveSettings();
     renderSettings();
     populateTransactionDropdowns();
+    renderDashboard();
   }
 
   function addPaymentMethod(name, type) {
@@ -6340,8 +6533,163 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function countTransactionsByAccount(accountName) {
     return transactions.filter((transaction) => {
-      return transaction.account === accountName;
+      return (
+        transaction.account === accountName ||
+        transaction.fromAccount === accountName ||
+        transaction.toAccount === accountName
+      );
     }).length;
+  }
+
+  function getAccountOpeningBalance(accountName) {
+    const account = settings.accounts.find((item) => {
+      return item.name === accountName;
+    });
+
+    if (!account) return 0;
+
+    return Number(account.openingBalance || 0);
+  }
+
+  function getAccountBalance(accountName) {
+    let balance = getAccountOpeningBalance(accountName);
+
+    transactions.forEach((transaction) => {
+      if (transaction.status !== "Completed") return;
+
+      const amount = Number(transaction.amount) || 0;
+
+      if (
+        transaction.type === "Income" &&
+        transaction.account === accountName
+      ) {
+        balance += amount;
+        return;
+      }
+
+      if (
+        (transaction.type === "Expense" || transaction.type === "Investment") &&
+        transaction.account === accountName
+      ) {
+        balance -= amount;
+        return;
+      }
+
+      if (transaction.type === "Transfer") {
+        const fromAccount = transaction.fromAccount || transaction.account;
+        const toAccount = transaction.toAccount;
+
+        if (fromAccount === accountName) {
+          balance -= amount;
+        }
+
+        if (toAccount === accountName) {
+          balance += amount;
+        }
+      }
+    });
+
+    return balance;
+  }
+
+  function getAccountBalanceTypeGroup(account) {
+    const type = String(account.type || "").toLowerCase();
+
+    if (type.includes("credit")) {
+      return "credit-card";
+    }
+
+    if (type.includes("bank")) {
+      return "bank";
+    }
+
+    if (type.includes("cash")) {
+      return "cash";
+    }
+
+    if (type.includes("wallet") || type.includes("e-wallet")) {
+      return "e-wallet";
+    }
+
+    return "other";
+  }
+
+  function getAccountBalanceSummary() {
+    const summary = {
+      bank: 0,
+      cash: 0,
+      eWallet: 0,
+      otherAccounts: 0,
+      liquidAssets: 0,
+      creditCardOutstanding: 0,
+      netLiquidBalance: 0,
+    };
+
+    (settings.accounts || []).forEach((account) => {
+      const balance = getAccountBalance(account.name);
+      const group = getAccountBalanceTypeGroup(account);
+
+      if (group === "credit-card") {
+        if (balance < 0) {
+          summary.creditCardOutstanding += Math.abs(balance);
+        } else {
+          summary.otherAccounts += balance;
+        }
+
+        return;
+      }
+
+      if (group === "bank") {
+        summary.bank += balance;
+        return;
+      }
+
+      if (group === "cash") {
+        summary.cash += balance;
+        return;
+      }
+
+      if (group === "e-wallet") {
+        summary.eWallet += balance;
+        return;
+      }
+
+      summary.otherAccounts += balance;
+    });
+
+    summary.liquidAssets =
+      summary.bank + summary.cash + summary.eWallet + summary.otherAccounts;
+
+    summary.netLiquidBalance =
+      summary.liquidAssets - summary.creditCardOutstanding;
+
+    return summary;
+  }
+
+  function setBalanceText(elementId, amount) {
+    const element = document.getElementById(elementId);
+
+    if (!element) return;
+
+    element.textContent = formatHKD(amount);
+
+    element.classList.toggle("negative-balance", amount < 0);
+    element.classList.toggle("positive-balance", amount >= 0);
+  }
+
+  function renderAccountBalanceSummary() {
+    const summary = getAccountBalanceSummary();
+
+    setBalanceText("dashboardNetLiquidBalance", summary.netLiquidBalance);
+    setBalanceText("dashboardLiquidAssets", summary.liquidAssets);
+    setBalanceText(
+      "dashboardCreditCardOutstanding",
+      summary.creditCardOutstanding,
+    );
+    setBalanceText("dashboardBankBalance", summary.bank);
+    setBalanceText("dashboardCashBalance", summary.cash);
+    setBalanceText("dashboardEWalletBalance", summary.eWallet);
+    setBalanceText("dashboardOtherAccountBalance", summary.otherAccounts);
   }
 
   function editCategory(categoryId) {
@@ -6517,6 +6865,20 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    const newOpeningBalanceText = prompt(
+      "Enter the opening balance HKD:",
+      String(account.openingBalance || 0),
+    );
+
+    if (newOpeningBalanceText === null) return;
+
+    const newOpeningBalance = Number(newOpeningBalanceText);
+
+    if (!Number.isFinite(newOpeningBalance)) {
+      showToast("Opening balance must be a valid number.", "error");
+      return;
+    }
+
     const oldName = account.name;
 
     let updatedAccount = null;
@@ -6526,6 +6888,7 @@ document.addEventListener("DOMContentLoaded", () => {
         updatedAccount = {
           ...item,
           name: trimmedName,
+          openingBalance: newOpeningBalance,
         };
 
         return updatedAccount;
@@ -6535,14 +6898,19 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     transactions = transactions.map((transaction) => {
-      if (transaction.account === oldName) {
-        return {
-          ...transaction,
-          account: trimmedName,
-        };
-      }
-
-      return transaction;
+      return {
+        ...transaction,
+        account:
+          transaction.account === oldName ? trimmedName : transaction.account,
+        fromAccount:
+          transaction.fromAccount === oldName
+            ? trimmedName
+            : transaction.fromAccount,
+        toAccount:
+          transaction.toAccount === oldName
+            ? trimmedName
+            : transaction.toAccount,
+      };
     });
 
     saveSettings();
@@ -6551,6 +6919,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderSettings();
     populateTransactionDropdowns();
     renderTransactions();
+    renderDashboard();
     renderMonthlySnapshot();
     renderDashboard();
     renderAnalytics();
@@ -6591,6 +6960,7 @@ document.addEventListener("DOMContentLoaded", () => {
     saveSettings();
     renderSettings();
     populateTransactionDropdowns();
+    renderDashboard();
 
     showToast(
       `Account "${deletedAccountName}" deleted successfully.`,
@@ -7872,8 +8242,15 @@ document.addEventListener("DOMContentLoaded", () => {
       "Description",
       "Category",
       "Account",
-      "Amount",
+      "From Account",
+      "To Account",
+      "Original Amount",
+      "Currency",
+      "Exchange Rate",
+      "Amount HKD",
+      "Payment Method",
       "Status",
+      "Notes",
       "Source",
       "Subscription ID",
     ];
@@ -7885,8 +8262,15 @@ document.addEventListener("DOMContentLoaded", () => {
         Description: transaction.description,
         Category: transaction.category,
         Account: transaction.account,
-        Amount: transaction.amount,
+        "From Account": transaction.fromAccount || "",
+        "To Account": transaction.toAccount || "",
+        "Original Amount": transaction.originalAmount ?? transaction.amount,
+        Currency: transaction.currency || "HKD",
+        "Exchange Rate": transaction.exchangeRate || 1,
+        "Amount HKD": transaction.amount,
+        "Payment Method": transaction.paymentMethod || "Not specified",
         Status: transaction.status,
+        Notes: transaction.notes || "",
         Source: transaction.source || "",
         "Subscription ID": transaction.subscriptionId || "",
       };
@@ -8457,6 +8841,8 @@ document.addEventListener("DOMContentLoaded", () => {
         preserveCategory: false,
         preserveAccount: true,
       });
+
+      updateTransactionTypeFields();
     });
   }
 
@@ -9531,6 +9917,14 @@ document.addEventListener("DOMContentLoaded", () => {
       populateTransactionDropdowns();
       clearFormError(accountForm);
       accountForm.reset();
+
+      const accountOpeningBalanceInput = document.getElementById(
+        "accountOpeningBalance",
+      );
+
+      if (accountOpeningBalanceInput) {
+        accountOpeningBalanceInput.value = "0";
+      }
 
       showToast("Account added successfully.", "success");
 
