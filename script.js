@@ -21,6 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const BUDGET_STORAGE_KEY = "permissionToSaveBudgets";
   const GOALS_STORAGE_KEY = "permissionToSaveSavingGoals";
   const SUBSCRIPTION_STORAGE_KEY = "permissionToSaveSubscriptions";
+  const BILLS_STORAGE_KEY = "permissionToSaveBills";
   const SETTINGS_STORAGE_KEY = "permissionToSaveSettings";
   const NET_WORTH_STORAGE_KEY = "permissionToSaveNetWorthItems";
   const INVESTMENT_STORAGE_KEY = "permissionToSaveInvestments";
@@ -42,6 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let editingTransactionId = null;
   let editingGoalId = null;
   let editingSubscriptionId = null;
+  let editingBillId = null;
   let editingNetWorthId = null;
   let editingInvestmentId = null;
 
@@ -187,6 +189,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let budgets = loadBudgets();
   let savingGoals = loadSavingGoals();
   let subscriptions = loadSubscriptions();
+  let bills = loadBills();
   let settings = loadSettings();
   let netWorthItems = loadNetWorthItems();
   let investments = loadInvestments();
@@ -1868,7 +1871,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!canUseCloudSync()) return;
 
     const confirmed = confirm(
-      "Upload all local data to cloud?\n\nThis will replace all existing cloud data for this account.",
+      "Upload cloud-enabled local data?\n\nThis will replace existing cloud data for this account. Bills Tracking stays on this device until Cloud Sync Part 4.",
     );
 
     if (!confirmed) return;
@@ -1922,6 +1925,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderBudgetPlanner();
     renderSavingGoals();
     renderSubscriptions();
+    renderBills();
     renderNetWorthTracking();
     renderInvestmentTracking();
     renderDashboard();
@@ -1932,7 +1936,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!canUseCloudSync()) return;
 
     const confirmed = confirm(
-      "Load all data from cloud?\n\nThis will replace all current local data on this device.",
+      "Load cloud-enabled data?\n\nThis will replace cloud-enabled local data on this device. Bills Tracking remains local until Cloud Sync Part 4.",
     );
 
     if (!confirmed) return;
@@ -2709,6 +2713,28 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
+  function loadBills() {
+    try {
+      const savedBills = localStorage.getItem(BILLS_STORAGE_KEY);
+      const parsedBills = savedBills ? JSON.parse(savedBills) : [];
+
+      if (!Array.isArray(parsedBills)) return [];
+
+      return parsedBills.map((bill) => ({
+        ...bill,
+        id: bill.id || createId(),
+        status: bill.status === "Paid" ? "Paid" : "Unpaid",
+      }));
+    } catch (error) {
+      console.error("Unable to read saved bills:", error);
+      return [];
+    }
+  }
+
+  function saveBills() {
+    localStorage.setItem(BILLS_STORAGE_KEY, JSON.stringify(bills));
+  }
+
   function loadSettings() {
     const savedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
 
@@ -2846,6 +2872,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     updateCurrentPageLabel(targetId);
+    if (targetId === "bills-tracking") renderBills();
     closeMobileMenu();
   }
 
@@ -8118,7 +8145,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function getBackupData() {
     return {
       app: "Permission to Save",
-      version: "1.0",
+      version: "1.1",
       exportedAt: new Date().toISOString(),
 
       data: {
@@ -8126,6 +8153,7 @@ document.addEventListener("DOMContentLoaded", () => {
         budgets,
         savingGoals,
         subscriptions,
+        bills,
         settings,
         netWorthItems,
         investments,
@@ -8155,6 +8183,7 @@ document.addEventListener("DOMContentLoaded", () => {
       `Budget Categories: ${getObjectCount(data.budgets)}`,
       `Saving Goals: ${getArrayCount(data.savingGoals)}`,
       `Subscriptions: ${getArrayCount(data.subscriptions)}`,
+      `Bills: ${getArrayCount(data.bills)}`,
       `Net Worth Items: ${getArrayCount(data.netWorthItems)}`,
       `Investments: ${getArrayCount(data.investments)}`,
       `Categories: ${getArrayCount(backupSettings.categories)}`,
@@ -8355,7 +8384,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     return {
       categories: normalizeItems(importedSettings.categories || []),
-      accounts: normalizeItems(importedSettings.accounts || []),
+      accounts: normalizeItems(importedSettings.accounts || []).map(normalizeAccount),
+      paymentMethods: normalizeItems(
+        importedSettings.paymentMethods || defaultSettings.paymentMethods,
+      ),
+      currencies: normalizeItems(
+        importedSettings.currencies || defaultSettings.currencies,
+      ).map(normalizeCurrency),
     };
   }
 
@@ -8364,6 +8399,7 @@ document.addEventListener("DOMContentLoaded", () => {
     budgets = normalizeBudgets(importedData.budgets || defaultBudgets);
     savingGoals = normalizeItems(importedData.savingGoals || []);
     subscriptions = normalizeItems(importedData.subscriptions || []);
+    bills = normalizeItems(importedData.bills || []);
     settings = normalizeSettings(importedData.settings);
     netWorthItems = normalizeItems(importedData.netWorthItems || []);
     investments = normalizeItems(importedData.investments || []);
@@ -8381,6 +8417,7 @@ document.addEventListener("DOMContentLoaded", () => {
     saveBudgets();
     saveSavingGoals();
     saveSubscriptions();
+    saveBills();
     saveSettings();
     saveNetWorthItems();
     saveInvestments();
@@ -8393,6 +8430,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderTransactions();
     renderSavingGoals();
     renderSubscriptions();
+    renderBills();
     renderNetWorthTracking();
     renderInvestmentTracking();
     renderDashboard();
@@ -8458,6 +8496,7 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.removeItem(BUDGET_STORAGE_KEY);
     localStorage.removeItem(GOALS_STORAGE_KEY);
     localStorage.removeItem(SUBSCRIPTION_STORAGE_KEY);
+    localStorage.removeItem(BILLS_STORAGE_KEY);
     localStorage.removeItem(SETTINGS_STORAGE_KEY);
     localStorage.removeItem(NET_WORTH_STORAGE_KEY);
     localStorage.removeItem(INVESTMENT_STORAGE_KEY);
@@ -8469,6 +8508,7 @@ document.addEventListener("DOMContentLoaded", () => {
     budgets = loadBudgets();
     savingGoals = loadSavingGoals();
     subscriptions = loadSubscriptions();
+    bills = loadBills();
     settings = loadSettings();
     netWorthItems = loadNetWorthItems();
     investments = loadInvestments();
@@ -8481,6 +8521,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderTransactions();
     renderSavingGoals();
     renderSubscriptions();
+    renderBills();
     renderNetWorthTracking();
     renderInvestmentTracking();
     renderDashboard();
@@ -10034,8 +10075,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // BILLS TRACKING - PART 1 (UI PREVIEW ONLY)
-  // Part 2 will add saving, editing, deletion and local data storage.
+  // BILLS TRACKING - PART 2 (LOCAL CRUD)
+  // Paid status does not create a Transaction until Part 3.
   // =========================
 
   const openBillModalBtn = document.getElementById("openBillModal");
@@ -10050,14 +10091,34 @@ document.addEventListener("DOMContentLoaded", () => {
   const billRateInput = document.getElementById("billExchangeRate");
   const billOriginalAmountInput = document.getElementById("billOriginalAmount");
   const billAmountHKDInput = document.getElementById("billAmountHKD");
+  const billCreditCardAccountInput = document.getElementById(
+    "billCreditCardAccount",
+  );
+  const billTableBody = document.getElementById("billTableBody");
 
   function updateBillCategoryField() {
     const isCreditCardStatement =
       billTypeInput && billTypeInput.value === "Credit Card Payment";
     const categoryField = document.getElementById("billCategoryField");
+    const creditCardAccountField = document.getElementById(
+      "billCreditCardAccountField",
+    );
+    const accountLabel = document.getElementById("billAccountLabel");
 
     if (categoryField) categoryField.hidden = !!isCreditCardStatement;
     if (billCategoryInput) billCategoryInput.disabled = !!isCreditCardStatement;
+    if (creditCardAccountField) {
+      creditCardAccountField.hidden = !isCreditCardStatement;
+    }
+    if (billCreditCardAccountInput) {
+      billCreditCardAccountInput.disabled = !isCreditCardStatement;
+      billCreditCardAccountInput.required = !!isCreditCardStatement;
+    }
+    if (accountLabel) {
+      accountLabel.textContent = isCreditCardStatement
+        ? "Pay From Account"
+        : "Payment Account";
+    }
   }
 
   function updateBillAmountPreview() {
@@ -10087,7 +10148,13 @@ document.addEventListener("DOMContentLoaded", () => {
   function openBillModal() {
     if (!billModal || !billForm) return;
 
+    editingBillId = null;
     billForm.reset();
+
+    const title = document.getElementById("billModalTitle");
+    const submit = document.getElementById("billSubmitBtn");
+    if (title) title.textContent = "Add Bill";
+    if (submit) submit.textContent = "Save Bill";
 
     const expenseCategories = getUniqueNames(
       (settings.categories || []).filter((item) => item.type === "Expense"),
@@ -10101,9 +10168,18 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("billPaymentMethod"),
       getPaymentMethodOptions(),
     );
+    populateSelectOptions(
+      billCreditCardAccountInput,
+      getUniqueNames(
+        (settings.accounts || []).filter((account) => {
+          return account.type === "Credit Card";
+        }),
+      ),
+    );
     populateCurrencySelect(billCurrencyInput, "HKD");
     updateBillCurrencyRate();
     updateBillCategoryField();
+    document.getElementById("billDueDate").value = getTodayDateString();
 
     billModal.classList.add("is-open");
     billModal.setAttribute("aria-hidden", "false");
@@ -10114,7 +10190,293 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!billModal) return;
     billModal.classList.remove("is-open");
     billModal.setAttribute("aria-hidden", "true");
+    editingBillId = null;
     openBillModalBtn?.focus();
+  }
+
+  function getBillDaysUntilDue(dueDate) {
+    const dateText = String(dueDate || "");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateText)) return Infinity;
+
+    const toUtc = (dateValue) => {
+      const [year, month, day] = dateValue.split("-").map(Number);
+      return Date.UTC(year, month - 1, day);
+    };
+
+    return Math.round(
+      (toUtc(dateText) - toUtc(getTodayDateString())) / 86400000,
+    );
+  }
+
+  function getBillDisplayStatus(bill) {
+    if (bill.status === "Paid") return "Paid";
+    const days = getBillDaysUntilDue(bill.dueDate);
+    if (days < 0) return "Overdue";
+    if (days <= 7) return "Due Soon";
+    return "Unpaid";
+  }
+
+  function renderBills() {
+    if (!billTableBody) return;
+
+    const unpaid = bills.filter((bill) => bill.status !== "Paid");
+    const thisMonth = getCurrentMonthString();
+    const dueSoonCount = unpaid.filter((bill) => {
+      const days = getBillDaysUntilDue(bill.dueDate);
+      return days >= 0 && days <= 7;
+    }).length;
+    const overdueCount = unpaid.filter((bill) => {
+      return getBillDaysUntilDue(bill.dueDate) < 0;
+    }).length;
+    const paidCount = bills.filter((bill) => {
+      return bill.status === "Paid" &&
+        String(bill.paidDate || "").slice(0, 7) === thisMonth;
+    }).length;
+    const unpaidTotal = unpaid.reduce((sum, bill) => {
+      return sum + (Number(bill.amountHKD) || 0);
+    }, 0);
+
+    document.getElementById("billsUnpaidTotal").textContent =
+      formatHKD(unpaidTotal);
+    document.getElementById("billsDueSoonCount").textContent =
+      String(dueSoonCount);
+    document.getElementById("billsOverdueCount").textContent =
+      String(overdueCount);
+    document.getElementById("billsPaidCount").textContent =
+      String(paidCount);
+
+    billTableBody.replaceChildren();
+
+    if (!bills.length) {
+      const emptyRow = document.createElement("tr");
+      const emptyCell = document.createElement("td");
+      emptyCell.colSpan = 6;
+      emptyCell.className = "bill-empty-row";
+      emptyCell.textContent = "No bills yet. Click Add Bill to create your first bill.";
+      emptyRow.appendChild(emptyCell);
+      billTableBody.appendChild(emptyRow);
+      return;
+    }
+
+    const sortedBills = [...bills].sort((first, second) => {
+      if (first.status !== second.status) {
+        return first.status === "Paid" ? 1 : -1;
+      }
+      const dateOrder = String(first.dueDate).localeCompare(String(second.dueDate));
+      return first.status === "Paid" ? -dateOrder : dateOrder;
+    });
+
+    sortedBills.forEach((bill) => {
+      const row = document.createElement("tr");
+      const nameCell = document.createElement("td");
+      const name = document.createElement("strong");
+      name.className = "bill-name";
+      name.textContent = bill.name || "Unnamed Bill";
+      nameCell.appendChild(name);
+
+      const detail = document.createElement("span");
+      detail.className = "bill-subtitle";
+      detail.textContent = [bill.category, bill.recurring !== "None" ? bill.recurring : ""]
+        .filter(Boolean)
+        .join(" · ");
+      if (detail.textContent) nameCell.appendChild(detail);
+      row.appendChild(nameCell);
+
+      const typeCell = document.createElement("td");
+      typeCell.textContent = bill.type === "Credit Card Payment"
+        ? "Credit Card Statement" : "Living Expense";
+      row.appendChild(typeCell);
+
+      const amountCell = document.createElement("td");
+      amountCell.textContent = formatHKD(bill.amountHKD);
+      row.appendChild(amountCell);
+
+      const dateCell = document.createElement("td");
+      dateCell.textContent = bill.dueDate || "—";
+      row.appendChild(dateCell);
+
+      const statusCell = document.createElement("td");
+      const status = getBillDisplayStatus(bill);
+      const statusBadge = document.createElement("span");
+      statusBadge.className = `bill-status bill-status-${status.toLowerCase().replace(/ /g, "-")}`;
+      statusBadge.textContent = status;
+      statusCell.appendChild(statusBadge);
+      row.appendChild(statusCell);
+
+      const actionCell = document.createElement("td");
+      actionCell.className = "bill-actions";
+      const makeButton = (label, action, extraClass = "") => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `bill-action-btn ${extraClass}`.trim();
+        button.dataset.billAction = action;
+        button.dataset.id = bill.id;
+        button.textContent = label;
+        return button;
+      };
+      actionCell.appendChild(makeButton("Edit", "edit"));
+      actionCell.appendChild(makeButton(
+        bill.status === "Paid" ? "Mark Unpaid" : "Mark Paid",
+        "toggle-paid",
+      ));
+      actionCell.appendChild(makeButton("Delete", "delete", "bill-action-danger"));
+      row.appendChild(actionCell);
+      billTableBody.appendChild(row);
+    });
+  }
+
+  function openEditBillModal(billId) {
+    const bill = bills.find((item) => item.id === billId);
+    if (!bill) return;
+
+    openBillModal();
+    editingBillId = bill.id;
+    document.getElementById("billModalTitle").textContent = "Edit Bill";
+    document.getElementById("billSubmitBtn").textContent = "Save Changes";
+    billNameInput.value = bill.name || "";
+    billTypeInput.value = bill.type || "Expense";
+    updateBillCategoryField();
+    billCategoryInput.value = bill.category || "";
+    billOriginalAmountInput.value = bill.originalAmount ?? "";
+    billCurrencyInput.value = bill.currency || "HKD";
+    billRateInput.value = bill.exchangeRate ?? 1;
+    document.getElementById("billDueDate").value = bill.dueDate || "";
+    document.getElementById("billAccount").value = bill.account || "";
+    document.getElementById("billPaymentMethod").value =
+      bill.paymentMethod || "";
+    billCreditCardAccountInput.value = bill.creditCardAccount || "";
+    document.getElementById("billRecurring").value = bill.recurring || "None";
+    document.getElementById("billStatus").value = bill.status || "Unpaid";
+    document.getElementById("billNotes").value = bill.notes || "";
+    updateBillAmountPreview();
+  }
+
+  function handleBillFormSubmit(event) {
+    event.preventDefault();
+    if (!billForm?.reportValidity()) return;
+
+    const type = billTypeInput.value;
+    const name = billNameInput.value.trim();
+    const originalAmount = Number(billOriginalAmountInput.value);
+    const exchangeRate = Number(billRateInput.value);
+    const amountHKD = Math.round(originalAmount * exchangeRate * 100) / 100;
+    const dueDate = document.getElementById("billDueDate").value;
+    const account = document.getElementById("billAccount").value;
+    const creditCardAccount = billCreditCardAccountInput.value;
+
+    if (!name || !dueDate || !(originalAmount > 0) ||
+        !(exchangeRate > 0) || !Number.isFinite(amountHKD)) {
+      showToast("Please enter a valid bill name, date, amount and exchange rate.", "error");
+      return;
+    }
+    if (!account || !document.getElementById("billPaymentMethod").value) {
+      showToast("Please select a payment account and method.", "error");
+      return;
+    }
+    if (type === "Expense" && !billCategoryInput.value) {
+      showToast("Please add or select an Expense Category in Settings.", "error");
+      return;
+    }
+    if (type === "Credit Card Payment" && !creditCardAccount) {
+      showToast("Please add or select a Credit Card Account in Settings.", "error");
+      return;
+    }
+    if (type === "Credit Card Payment" && account === creditCardAccount) {
+      showToast("The payment source and credit card account must be different.", "error");
+      return;
+    }
+
+    const previousBill = bills.find((bill) => bill.id === editingBillId);
+    const status = document.getElementById("billStatus").value;
+    const bill = {
+      id: previousBill?.id || createId(),
+      name,
+      type,
+      category: type === "Expense" ? billCategoryInput.value : "",
+      originalAmount,
+      currency: billCurrencyInput.value || "HKD",
+      exchangeRate,
+      amountHKD,
+      dueDate,
+      account,
+      creditCardAccount: type === "Credit Card Payment" ? creditCardAccount : "",
+      paymentMethod: document.getElementById("billPaymentMethod").value,
+      recurring: document.getElementById("billRecurring").value,
+      status,
+      paidDate: status === "Paid"
+        ? previousBill?.paidDate || getTodayDateString() : "",
+      notes: document.getElementById("billNotes").value.trim(),
+      createdAt: previousBill?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const previousBills = bills;
+    bills = previousBill
+      ? bills.map((item) => item.id === bill.id ? bill : item)
+      : [...bills, bill];
+
+    try {
+      saveBills();
+    } catch (error) {
+      bills = previousBills;
+      console.error("Unable to save bill:", error);
+      showToast("Unable to save the bill on this device.", "error");
+      return;
+    }
+
+    renderBills();
+    closeBillModal();
+    showToast("Bill saved locally. No Transaction was created yet.", "success");
+  }
+
+  function toggleBillPaidStatus(billId) {
+    const bill = bills.find((item) => item.id === billId);
+    if (!bill) return;
+    const nextStatus = bill.status === "Paid" ? "Unpaid" : "Paid";
+    if (nextStatus === "Paid" && !confirm(
+      `Mark "${bill.name}" as Paid?\n\nThis only updates Bills Tracking. No Transaction or account balance change will occur in Part 2.`,
+    )) return;
+
+    const previousBills = bills;
+    bills = bills.map((item) => item.id === billId ? {
+      ...item,
+      status: nextStatus,
+      paidDate: nextStatus === "Paid" ? getTodayDateString() : "",
+      updatedAt: new Date().toISOString(),
+    } : item);
+
+    try {
+      saveBills();
+    } catch (error) {
+      bills = previousBills;
+      console.error("Unable to update bill:", error);
+      showToast("Unable to update the bill.", "error");
+      return;
+    }
+
+    renderBills();
+    showToast(`Bill marked ${nextStatus}. No Transaction was created.`, "success");
+  }
+
+  function deleteBill(billId) {
+    const bill = bills.find((item) => item.id === billId);
+    if (!bill || !confirm(`Delete the bill "${bill.name}"?\n\nThis cannot be undone unless you have a JSON backup.`)) {
+      return;
+    }
+
+    const previousBills = bills;
+    bills = bills.filter((item) => item.id !== billId);
+    try {
+      saveBills();
+    } catch (error) {
+      bills = previousBills;
+      console.error("Unable to delete bill:", error);
+      showToast("Unable to delete the bill.", "error");
+      return;
+    }
+
+    renderBills();
+    showToast("Bill deleted locally.", "success");
   }
 
   openBillModalBtn?.addEventListener("click", openBillModal);
@@ -10132,7 +10494,15 @@ document.addEventListener("DOMContentLoaded", () => {
   billCurrencyInput?.addEventListener("change", updateBillCurrencyRate);
   billOriginalAmountInput?.addEventListener("input", updateBillAmountPreview);
   billRateInput?.addEventListener("input", updateBillAmountPreview);
-  billForm?.addEventListener("submit", (event) => event.preventDefault());
+  billForm?.addEventListener("submit", handleBillFormSubmit);
+  billTableBody?.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-bill-action]");
+    if (!button) return;
+    const { billAction, id } = button.dataset;
+    if (billAction === "edit") openEditBillModal(id);
+    if (billAction === "toggle-paid") toggleBillPaidStatus(id);
+    if (billAction === "delete") deleteBill(id);
+  });
 
   const segmentedButtons = document.querySelectorAll(".segmented button");
 
@@ -10161,6 +10531,7 @@ document.addEventListener("DOMContentLoaded", () => {
   renderTransactions();
   renderSavingGoals();
   renderSubscriptions();
+  renderBills();
   renderNetWorthTracking();
   renderInvestmentTracking();
   renderDashboard();

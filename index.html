@@ -6,7 +6,7 @@
     <title>Permission to Save</title>
 
     <link rel="icon" type="image/svg+xml" href="./favicon.svg?v=20260619" />
-    <link rel="stylesheet" href="./style.css?v=20261116-bills-part1" />
+    <link rel="stylesheet" href="./style.css?v=20261116-bills-part2" />
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -1407,7 +1407,7 @@
             </div>
           </section>
 
-          <!-- BILLS TRACKING PAGE: Part 1 UI only -->
+          <!-- BILLS TRACKING PAGE -->
           <section id="bills-tracking" class="page-section">
             <div class="page-title page-title-row">
               <div>
@@ -1444,7 +1444,7 @@
                 <div>
                   <h3>Bill List</h3>
                   <p class="section-note">
-                    Bill saving and payment actions will be enabled in Part 2.
+                    Manage bills locally. Transactions and Cloud Sync will be linked in later stages.
                   </p>
                 </div>
               </div>
@@ -1464,7 +1464,7 @@
                   <tbody id="billTableBody">
                     <tr>
                       <td colspan="6" class="bill-empty-row">
-                        No bills yet. The Add Bill form is a preview in Part 1.
+                        No bills yet. Click Add Bill to create your first bill.
                       </td>
                     </tr>
                   </tbody>
@@ -1472,7 +1472,7 @@
               </div>
             </section>
 
-            <!-- BILL MODAL: Part 1 preview; no data is saved yet -->
+            <!-- BILL MODAL -->
             <div
               class="modal-overlay"
               id="billModal"
@@ -1562,8 +1562,13 @@
                     </div>
 
                     <div class="form-field">
-                      <label for="billAccount">Payment Account</label>
+                      <label for="billAccount" id="billAccountLabel">Payment Account</label>
                       <select id="billAccount" required></select>
+                    </div>
+
+                    <div class="form-field" id="billCreditCardAccountField" hidden>
+                      <label for="billCreditCardAccount">Credit Card Account</label>
+                      <select id="billCreditCardAccount" disabled></select>
                     </div>
 
                     <div class="form-field">
@@ -1601,15 +1606,17 @@
                   </div>
 
                   <p class="bill-preview-hint" role="status">
-                    Part 1 preview: you can review the fields, but saving will be available in Part 2.
+                    Bills are saved on this device only. Marking Paid does not create
+                    a Transaction or change an account balance yet. Repeat is for reference;
+                    future bills are not generated automatically in Part 2.
                   </p>
 
                   <div class="modal-actions">
                     <button class="secondary-btn" id="cancelBillModal" type="button">
                       Cancel
                     </button>
-                    <button class="primary-btn" id="billSubmitBtn" type="submit" disabled>
-                      Save Bill (Part 2)
+                    <button class="primary-btn" id="billSubmitBtn" type="submit">
+                      Save Bill
                     </button>
                   </div>
                 </form>
@@ -2587,6 +2594,6 @@
 
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="./script.js?v=20261116-bills-part1"></script>
+    <script src="./script.js?v=20261116-bills-part2"></script>
   </body>
 </html>
