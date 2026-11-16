@@ -6,7 +6,7 @@
     <title>Permission to Save</title>
 
     <link rel="icon" type="image/svg+xml" href="./favicon.svg?v=20260619" />
-    <link rel="stylesheet" href="./style.css?v=20261116-bills-part2" />
+    <link rel="stylesheet" href="./style.css?v=20261116-bills-part3" />
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -1444,7 +1444,7 @@
                 <div>
                   <h3>Bill List</h3>
                   <p class="section-note">
-                    Manage bills locally. Transactions and Cloud Sync will be linked in later stages.
+                    Paid bills can create Transactions. Bills themselves remain local until Cloud Sync Part 4.
                   </p>
                 </div>
               </div>
@@ -1595,6 +1595,11 @@
                       </select>
                     </div>
 
+                    <div class="form-field" id="billPaidDateField" hidden>
+                      <label for="billPaidDate">Paid Date</label>
+                      <input type="date" id="billPaidDate" disabled />
+                    </div>
+
                     <div class="form-field full-width">
                       <label for="billNotes">Notes</label>
                       <textarea
@@ -1606,9 +1611,10 @@
                   </div>
 
                   <p class="bill-preview-hint" role="status">
-                    Bills are saved on this device only. Marking Paid does not create
-                    a Transaction or change an account balance yet. Repeat is for reference;
-                    future bills are not generated automatically in Part 2.
+                    Marking a bill Paid records a completed Expense or Transfer and
+                    updates account balances. Mark Unpaid reverses its linked transaction.
+                    Bills remain local to this device until Cloud Sync Part 4.
+                    Repeat is for reference; future bills are not generated automatically yet.
                   </p>
 
                   <div class="modal-actions">
@@ -2594,6 +2600,6 @@
 
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="./script.js?v=20261116-bills-part2"></script>
+    <script src="./script.js?v=20261116-bills-part3"></script>
   </body>
 </html>

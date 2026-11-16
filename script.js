@@ -2258,6 +2258,16 @@ document.addEventListener("DOMContentLoaded", () => {
     })}`;
   }
 
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    }[character]));
+  }
+
   function normalizeTransaction(transaction) {
     const amount = Number(transaction.amount) || 0;
 
@@ -2436,7 +2446,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     return `
     <span class="transaction-currency-meta">
-      ${formatCurrencyAmount(originalAmount, currency)} · Rate ${exchangeRate}
+      ${escapeHtml(formatCurrencyAmount(originalAmount, currency))} · Rate ${exchangeRate}
     </span>
   `;
   }
@@ -2585,11 +2595,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const paymentText =
       paymentMethod && paymentMethod !== "Not specified"
-        ? `<span class="transaction-detail-meta">Payment: ${paymentMethod}</span>`
+        ? `<span class="transaction-detail-meta">Payment: ${escapeHtml(paymentMethod)}</span>`
         : "";
 
     const notesText = notes
-      ? `<span class="transaction-notes-meta">Notes: ${notes}</span>`
+      ? `<span class="transaction-notes-meta">Notes: ${escapeHtml(notes)}</span>`
       : "";
 
     return `${paymentText}${notesText}`;
@@ -3373,35 +3383,35 @@ document.addEventListener("DOMContentLoaded", () => {
       row.dataset.amount = transaction.amount;
 
       row.innerHTML = `
-        <td>${transaction.date}</td>
-        <td>${transaction.description}</td>
+        <td>${escapeHtml(transaction.date)}</td>
+        <td>${escapeHtml(transaction.description)}</td>
         <td class="transaction-detail-cell">
-  <strong>${transaction.description}</strong>
+  <strong>${escapeHtml(transaction.description)}</strong>
   ${getTransactionDetailMetaHtml(transaction)}
 </td>
-        <td><span class="tag ${typeTagClass}">${transaction.type}</span></td>
-        <td>${transaction.category}</td>
+        <td><span class="tag ${typeTagClass}">${escapeHtml(transaction.type)}</span></td>
+        <td>${escapeHtml(transaction.category)}</td>
         <td>
   ${
     transaction.type === "Transfer"
-      ? `${transaction.fromAccount || transaction.account} → ${
-          transaction.toAccount || "-"
+      ? `${escapeHtml(transaction.fromAccount || transaction.account)} → ${
+          escapeHtml(transaction.toAccount || "-")
         }`
-      : transaction.account
+      : escapeHtml(transaction.account)
   }
 </td>
         <td class="${amountClass}">
   <strong>${formatHKD(transaction.amount)}</strong>
   ${getTransactionOriginalAmountHtml(transaction)}
 </td>
-        <td><span class="status ${statusDotClass}"></span>${transaction.status}</td>
+        <td><span class="status ${statusDotClass}"></span>${escapeHtml(transaction.status)}</td>
         <td>
           <div class="action-buttons">
-            <button class="edit-transaction-btn" data-id="${transaction.id}" type="button" aria-label="Edit transaction">
+            <button class="edit-transaction-btn" data-id="${escapeHtml(transaction.id)}" type="button" aria-label="Edit transaction">
               <i data-lucide="pencil"></i>
             </button>
 
-            <button class="delete-transaction-btn" data-id="${transaction.id}" type="button" aria-label="Delete transaction">
+            <button class="delete-transaction-btn" data-id="${escapeHtml(transaction.id)}" type="button" aria-label="Delete transaction">
               <i data-lucide="trash-2"></i>
             </button>
           </div>
@@ -3763,6 +3773,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function openEditTransactionModal(transactionId) {
+    if (findBillByTransactionId(transactionId)) {
+      showToast("This transaction is linked to Bills Tracking. Edit the bill instead.", "info");
+      showPage("bills-tracking");
+      return;
+    }
     const transaction = transactions.find((item) => item.id === transactionId);
     const transactionModal = document.getElementById("transactionModal");
 
@@ -3846,6 +3861,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function deleteTransaction(transactionId) {
+    if (findBillByTransactionId(transactionId)) {
+      showToast("This transaction is linked to Bills Tracking. Mark the bill Unpaid or delete the bill there.", "warning");
+      showPage("bills-tracking");
+      return;
+    }
     const confirmed = confirm(
       "Are you sure you want to delete this transaction?",
     );
@@ -4261,10 +4281,10 @@ document.addEventListener("DOMContentLoaded", () => {
       row.setAttribute("title", "View this transaction");
 
       row.innerHTML = `
-      <td>${transaction.date}</td>
-      <td><span class="tag ${tagClass}">${transaction.category}</span></td>
-      <td>${transaction.account}</td>
-      <td><span class="status ${statusDotClass}"></span>${transaction.status}</td>
+      <td>${escapeHtml(transaction.date)}</td>
+      <td><span class="tag ${tagClass}">${escapeHtml(transaction.category)}</span></td>
+      <td>${escapeHtml(transaction.account)}</td>
+      <td><span class="status ${statusDotClass}"></span>${escapeHtml(transaction.status)}</td>
     `;
 
       tableBody.appendChild(row);
@@ -10075,8 +10095,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // BILLS TRACKING - PART 2 (LOCAL CRUD)
-  // Paid status does not create a Transaction until Part 3.
+  // BILLS TRACKING - PART 3 (PAYMENT -> TRANSACTIONS)
   // =========================
 
   const openBillModalBtn = document.getElementById("openBillModal");
@@ -10091,6 +10110,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const billRateInput = document.getElementById("billExchangeRate");
   const billOriginalAmountInput = document.getElementById("billOriginalAmount");
   const billAmountHKDInput = document.getElementById("billAmountHKD");
+  const billStatusInput = document.getElementById("billStatus");
+  const billPaidDateInput = document.getElementById("billPaidDate");
   const billCreditCardAccountInput = document.getElementById(
     "billCreditCardAccount",
   );
@@ -10118,6 +10139,19 @@ document.addEventListener("DOMContentLoaded", () => {
       accountLabel.textContent = isCreditCardStatement
         ? "Pay From Account"
         : "Payment Account";
+    }
+  }
+
+  function updateBillPaidDateField() {
+    const isPaid = billStatusInput?.value === "Paid";
+    const paidDateField = document.getElementById("billPaidDateField");
+    if (paidDateField) paidDateField.hidden = !isPaid;
+    if (billPaidDateInput) {
+      billPaidDateInput.disabled = !isPaid;
+      billPaidDateInput.required = isPaid;
+      if (isPaid && !billPaidDateInput.value) {
+        billPaidDateInput.value = getTodayDateString();
+      }
     }
   }
 
@@ -10179,6 +10213,7 @@ document.addEventListener("DOMContentLoaded", () => {
     populateCurrencySelect(billCurrencyInput, "HKD");
     updateBillCurrencyRate();
     updateBillCategoryField();
+    updateBillPaidDateField();
     document.getElementById("billDueDate").value = getTodayDateString();
 
     billModal.classList.add("is-open");
@@ -10208,12 +10243,165 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
+  function isValidBillDate(dateValue) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateValue || ""))) return false;
+    const [year, month, day] = dateValue.split("-").map(Number);
+    const result = new Date(Date.UTC(year, month - 1, day));
+    return result.getUTCFullYear() === year &&
+      result.getUTCMonth() + 1 === month &&
+      result.getUTCDate() === day;
+  }
+
   function getBillDisplayStatus(bill) {
     if (bill.status === "Paid") return "Paid";
     const days = getBillDaysUntilDue(bill.dueDate);
     if (days < 0) return "Overdue";
     if (days <= 7) return "Due Soon";
     return "Unpaid";
+  }
+
+  // A stable transaction ID prevents duplicate bill payments, even after a
+  // transaction has been downloaded from Supabase (local billId is not in SQL).
+  function getBillTransactionId(bill) {
+    return bill?.transactionId || `bill-${bill?.id}`;
+  }
+
+  function getLinkedBillTransaction(bill) {
+    if (!bill) return null;
+    const ids = new Set([getBillTransactionId(bill), `bill-${bill.id}`]);
+    return transactions.find((transaction) => ids.has(transaction.id)) || null;
+  }
+
+  function findBillByTransactionId(transactionId) {
+    return bills.find((bill) => {
+      return getBillTransactionId(bill) === transactionId ||
+        `bill-${bill.id}` === transactionId;
+    }) || null;
+  }
+
+  function validateBillPayment(bill) {
+    const accountNames = new Set(
+      (settings.accounts || []).map((account) => account.name),
+    );
+    const validAmount = Number.isFinite(Number(bill.amountHKD)) &&
+      Number(bill.amountHKD) > 0;
+    if (!validAmount || !isValidBillDate(bill.paidDate) || !bill.account ||
+        !accountNames.has(bill.account)) {
+      return "A valid amount, Paid Date and Payment Account are required.";
+    }
+
+    if (bill.type === "Credit Card Payment") {
+      if (!bill.creditCardAccount || !accountNames.has(bill.creditCardAccount)) {
+        return "Please select a valid Credit Card Account in Settings.";
+      }
+      if (bill.account === bill.creditCardAccount) {
+        return "Payment Account and Credit Card Account must be different.";
+      }
+    } else if (!bill.category) {
+      return "Please select an Expense Category for the bill.";
+    }
+
+    return "";
+  }
+
+  function buildBillTransaction(bill) {
+    const isCardPayment = bill.type === "Credit Card Payment";
+    const transactionId = getBillTransactionId(bill);
+
+    return normalizeTransaction({
+      id: transactionId,
+      date: bill.paidDate,
+      type: isCardPayment ? "Transfer" : "Expense",
+      description: bill.name,
+      category: isCardPayment ? "Transfer" : bill.category,
+      account: bill.account,
+      fromAccount: isCardPayment ? bill.account : "",
+      toAccount: isCardPayment ? bill.creditCardAccount : "",
+      amount: Number(bill.amountHKD),
+      originalAmount: Number(bill.originalAmount),
+      currency: bill.currency || "HKD",
+      exchangeRate: Number(bill.exchangeRate) || 1,
+      paymentMethod: bill.paymentMethod || "Not specified",
+      notes: [bill.notes, "Created from Bills Tracking"].filter(Boolean).join(" | "),
+      status: "Completed",
+      billId: bill.id,
+      // Leave the cloud 'source' column unchanged; no Supabase schema change
+      // is required for Part 3. The deterministic local_id preserves linkage.
+      source: "",
+    });
+  }
+
+  function planBillPaymentChange(nextBill, previousBill, forceRecord = false) {
+    const existing = getLinkedBillTransaction(previousBill || nextBill);
+    const wasPaid = previousBill?.status === "Paid";
+    const isPaid = nextBill.status === "Paid";
+    const shouldRecord = isPaid && (forceRecord || existing || !wasPaid);
+
+    if (shouldRecord) {
+      const validationError = validateBillPayment(nextBill);
+      if (validationError) return { error: validationError };
+
+      const updatedBill = {
+        ...nextBill,
+        transactionId: getBillTransactionId(nextBill),
+      };
+      const generated = buildBillTransaction(updatedBill);
+      const nextTransactions = existing
+        ? transactions.map((item) => item.id === existing.id ? generated : item)
+        : [generated, ...transactions];
+      return {
+        bill: updatedBill,
+        transactions: nextTransactions,
+        upsert: generated,
+      };
+    }
+
+    if (!isPaid && existing) {
+      return {
+        bill: {...nextBill, transactionId: ""},
+        transactions: transactions.filter((item) => item.id !== existing.id),
+        deleteId: existing.id,
+      };
+    }
+
+    return {
+      bill: isPaid ? nextBill : {...nextBill, transactionId: ""},
+      transactions,
+    };
+  }
+
+  // Keep the two local arrays consistent. Cloud sync is the existing
+  // best-effort per-transaction process, not a cross-table transaction.
+  function commitBillPaymentChange(nextBills, nextTransactions, effects = {}) {
+    const previousBills = bills;
+    const previousTransactions = transactions;
+    const transactionsChanged = nextTransactions !== transactions;
+
+    bills = nextBills;
+    transactions = nextTransactions;
+
+    try {
+      if (transactionsChanged) saveTransactions();
+      saveBills();
+    } catch (error) {
+      bills = previousBills;
+      transactions = previousTransactions;
+      try {
+        if (transactionsChanged) saveTransactions();
+        saveBills();
+      } catch (rollbackError) {
+        console.error("Unable to restore previous local bill data:", rollbackError);
+      }
+      console.error("Unable to save bill payment:", error);
+      showToast("Unable to save bill payment on this device.", "error");
+      return false;
+    }
+
+    renderBills();
+    if (transactionsChanged) renderTransactions();
+    if (effects.upsert) upsertTransactionToCloud(effects.upsert);
+    if (effects.deleteId) deleteTransactionFromCloud(effects.deleteId);
+    return true;
   }
 
   function renderBills() {
@@ -10268,6 +10456,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     sortedBills.forEach((bill) => {
       const row = document.createElement("tr");
+      const linkedTransaction = getLinkedBillTransaction(bill);
       const nameCell = document.createElement("td");
       const name = document.createElement("strong");
       name.className = "bill-name";
@@ -10301,6 +10490,14 @@ document.addEventListener("DOMContentLoaded", () => {
       statusBadge.className = `bill-status bill-status-${status.toLowerCase().replace(/ /g, "-")}`;
       statusBadge.textContent = status;
       statusCell.appendChild(statusBadge);
+      if (bill.status === "Paid") {
+        const linkStatus = document.createElement("span");
+        linkStatus.className = "bill-link-status";
+        linkStatus.textContent = linkedTransaction
+          ? "Transaction recorded"
+          : "Not recorded yet";
+        statusCell.appendChild(linkStatus);
+      }
       row.appendChild(statusCell);
 
       const actionCell = document.createElement("td");
@@ -10315,6 +10512,9 @@ document.addEventListener("DOMContentLoaded", () => {
         return button;
       };
       actionCell.appendChild(makeButton("Edit", "edit"));
+      if (bill.status === "Paid" && !linkedTransaction) {
+        actionCell.appendChild(makeButton("Record Payment", "record"));
+      }
       actionCell.appendChild(makeButton(
         bill.status === "Paid" ? "Mark Unpaid" : "Mark Paid",
         "toggle-paid",
@@ -10347,6 +10547,8 @@ document.addEventListener("DOMContentLoaded", () => {
     billCreditCardAccountInput.value = bill.creditCardAccount || "";
     document.getElementById("billRecurring").value = bill.recurring || "None";
     document.getElementById("billStatus").value = bill.status || "Unpaid";
+    updateBillPaidDateField();
+    billPaidDateInput.value = bill.paidDate || getTodayDateString();
     document.getElementById("billNotes").value = bill.notes || "";
     updateBillAmountPreview();
   }
@@ -10404,79 +10606,152 @@ document.addEventListener("DOMContentLoaded", () => {
       recurring: document.getElementById("billRecurring").value,
       status,
       paidDate: status === "Paid"
-        ? previousBill?.paidDate || getTodayDateString() : "",
+        ? billPaidDateInput.value : "",
+      transactionId: previousBill?.transactionId || "",
       notes: document.getElementById("billNotes").value.trim(),
       createdAt: previousBill?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    const previousBills = bills;
-    bills = previousBill
-      ? bills.map((item) => item.id === bill.id ? bill : item)
-      : [...bills, bill];
-
-    try {
-      saveBills();
-    } catch (error) {
-      bills = previousBills;
-      console.error("Unable to save bill:", error);
-      showToast("Unable to save the bill on this device.", "error");
+    const plan = planBillPaymentChange(bill, previousBill);
+    if (plan.error) {
+      showToast(plan.error, "error");
       return;
     }
 
-    renderBills();
+    if (plan.upsert && !confirm(
+      `${previousBill ? "Update" : "Create"} the completed ${plan.upsert.type} transaction linked to "${bill.name}"?\n\n` +
+      `Payment Date: ${bill.paidDate}\nAmount: ${formatHKD(bill.amountHKD)}\n` +
+      `Account: ${bill.account}\n\nThis will update your account balances. Do not proceed if you have already recorded the same payment manually.`,
+    )) return;
+
+    if (plan.deleteId && !confirm(
+      `Changing "${bill.name}" to Unpaid will delete its linked transaction and reverse its account balance effect. Continue?`,
+    )) return;
+
+    const nextBills = previousBill
+      ? bills.map((item) => item.id === bill.id ? plan.bill : item)
+      : [...bills, plan.bill];
+
+    const saved = commitBillPaymentChange(nextBills, plan.transactions, plan);
+    if (!saved) return;
+
     closeBillModal();
-    showToast("Bill saved locally. No Transaction was created yet.", "success");
+    showToast(
+      plan.upsert
+        ? "Bill and completed Transaction saved. Account balances updated."
+        : plan.deleteId
+          ? "Bill updated; linked Transaction removed."
+          : "Bill saved locally.",
+      "success",
+    );
   }
 
   function toggleBillPaidStatus(billId) {
     const bill = bills.find((item) => item.id === billId);
     if (!bill) return;
     const nextStatus = bill.status === "Paid" ? "Unpaid" : "Paid";
-    if (nextStatus === "Paid" && !confirm(
-      `Mark "${bill.name}" as Paid?\n\nThis only updates Bills Tracking. No Transaction or account balance change will occur in Part 2.`,
-    )) return;
+    let paidDate = "";
 
-    const previousBills = bills;
-    bills = bills.map((item) => item.id === billId ? {
-      ...item,
+    if (nextStatus === "Paid") {
+      const entered = prompt(
+        `Payment date for "${bill.name}" (YYYY-MM-DD):`,
+        getTodayDateString(),
+      );
+      if (entered === null) return;
+      paidDate = entered.trim();
+      if (!isValidBillDate(paidDate)) {
+        showToast("Please enter a valid payment date (YYYY-MM-DD).", "error");
+        return;
+      }
+    }
+
+    const updatedBill = {
+      ...bill,
       status: nextStatus,
-      paidDate: nextStatus === "Paid" ? getTodayDateString() : "",
+      paidDate,
       updatedAt: new Date().toISOString(),
-    } : item);
-
-    try {
-      saveBills();
-    } catch (error) {
-      bills = previousBills;
-      console.error("Unable to update bill:", error);
-      showToast("Unable to update the bill.", "error");
+    };
+    const plan = planBillPaymentChange(updatedBill, bill);
+    if (plan.error) {
+      showToast(plan.error, "error");
       return;
     }
 
-    renderBills();
-    showToast(`Bill marked ${nextStatus}. No Transaction was created.`, "success");
+    if (plan.upsert && !confirm(
+      `Record payment for "${bill.name}"?\n\n` +
+      `${plan.upsert.type}: ${formatHKD(bill.amountHKD)}\nDate: ${paidDate}\n` +
+      `Account: ${bill.account}\n\nThis will create a completed Transaction and update Account Balance. Cancel if the payment was already entered in Transactions.`,
+    )) return;
+
+    if (plan.deleteId && !confirm(
+      `Mark "${bill.name}" Unpaid AND delete its linked Transaction?\n\nThe account balance change will be reversed.`,
+    )) return;
+
+    const nextBills = bills.map((item) => item.id === billId ? plan.bill : item);
+    const saved = commitBillPaymentChange(nextBills, plan.transactions, plan);
+    if (!saved) return;
+
+    showToast(nextStatus === "Paid"
+      ? "Bill marked Paid and Transaction recorded."
+      : "Bill marked Unpaid; linked Transaction removed if present.",
+      "success",
+    );
+  }
+
+  function recordPreviousBillPayment(billId) {
+    const bill = bills.find((item) => item.id === billId);
+    if (!bill || bill.status !== "Paid" || getLinkedBillTransaction(bill)) return;
+
+    const chosenDate = prompt(
+      `Payment date for "${bill.name}" (YYYY-MM-DD):`,
+      bill.paidDate || getTodayDateString(),
+    );
+    if (chosenDate === null) return;
+    const paidDate = chosenDate.trim();
+    if (!isValidBillDate(paidDate)) {
+      showToast("Please enter a valid payment date (YYYY-MM-DD).", "error");
+      return;
+    }
+
+    const nextBill = {...bill, paidDate, updatedAt: new Date().toISOString()};
+    const plan = planBillPaymentChange(nextBill, bill, true);
+    if (plan.error) {
+      showToast(plan.error, "error");
+      return;
+    }
+
+    if (!confirm(
+      `Record a completed ${plan.upsert.type} transaction for the existing Paid bill "${bill.name}"?\n\n` +
+      `Amount: ${formatHKD(bill.amountHKD)}\nDate: ${paidDate}\n\n` +
+      "Only continue if this payment has NOT already been entered manually in Transactions.",
+    )) return;
+
+    const nextBills = bills.map((item) => item.id === billId ? plan.bill : item);
+    if (commitBillPaymentChange(nextBills, plan.transactions, plan)) {
+      showToast("Existing Paid bill linked to a completed Transaction.", "success");
+    }
   }
 
   function deleteBill(billId) {
     const bill = bills.find((item) => item.id === billId);
-    if (!bill || !confirm(`Delete the bill "${bill.name}"?\n\nThis cannot be undone unless you have a JSON backup.`)) {
+    if (!bill) return;
+    const linkedTransaction = getLinkedBillTransaction(bill);
+    const extraWarning = linkedTransaction
+      ? "\n\nIts linked Transaction will ALSO be deleted, reversing its account balance effect."
+      : "";
+    if (!confirm(`Delete the bill "${bill.name}"?${extraWarning}\n\nThis cannot be undone unless you have a JSON backup.`)) {
       return;
     }
 
-    const previousBills = bills;
-    bills = bills.filter((item) => item.id !== billId);
-    try {
-      saveBills();
-    } catch (error) {
-      bills = previousBills;
-      console.error("Unable to delete bill:", error);
-      showToast("Unable to delete the bill.", "error");
-      return;
-    }
-
-    renderBills();
-    showToast("Bill deleted locally.", "success");
+    const nextBills = bills.filter((item) => item.id !== billId);
+    const nextTransactions = linkedTransaction
+      ? transactions.filter((item) => item.id !== linkedTransaction.id)
+      : transactions;
+    const saved = commitBillPaymentChange(nextBills, nextTransactions, {
+      deleteId: linkedTransaction?.id,
+    });
+    if (saved) showToast("Bill and any linked Transaction deleted.", "success");
   }
 
   openBillModalBtn?.addEventListener("click", openBillModal);
@@ -10491,6 +10766,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
   billTypeInput?.addEventListener("change", updateBillCategoryField);
+  billStatusInput?.addEventListener("change", updateBillPaidDateField);
   billCurrencyInput?.addEventListener("change", updateBillCurrencyRate);
   billOriginalAmountInput?.addEventListener("input", updateBillAmountPreview);
   billRateInput?.addEventListener("input", updateBillAmountPreview);
@@ -10500,6 +10776,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!button) return;
     const { billAction, id } = button.dataset;
     if (billAction === "edit") openEditBillModal(id);
+    if (billAction === "record") recordPreviousBillPayment(id);
     if (billAction === "toggle-paid") toggleBillPaidStatus(id);
     if (billAction === "delete") deleteBill(id);
   });

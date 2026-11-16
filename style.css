@@ -4315,7 +4315,7 @@ body.dark-mode .account-summary-item {
   color: #e05252 !important;
 }
 
-/* BILLS TRACKING - PART 2 */
+/* BILLS TRACKING - PART 3 */
 .bill-summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -4374,6 +4374,17 @@ body.dark-mode .account-summary-item {
 
 #billCreditCardAccountField[hidden] {
   display: none;
+}
+
+#billPaidDateField[hidden] {
+  display: none;
+}
+
+.bill-link-status {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  color: var(--muted);
 }
 
 .bill-name {
