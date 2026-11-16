@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
     "budget-planner": "Budget Planner",
     "saving-goals": "Saving Goals",
     "subscription-tracking": "Subscription Tracking",
+    "bills-tracking": "Bills Tracking",
     settings: "Settings",
     "investment-tracking": "Investment Tracking",
     "net-worth-tracking": "Net Worth Tracking",
@@ -10031,6 +10032,107 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
+  // =========================
+  // BILLS TRACKING - PART 1 (UI PREVIEW ONLY)
+  // Part 2 will add saving, editing, deletion and local data storage.
+  // =========================
+
+  const openBillModalBtn = document.getElementById("openBillModal");
+  const closeBillModalBtn = document.getElementById("closeBillModal");
+  const cancelBillModalBtn = document.getElementById("cancelBillModal");
+  const billModal = document.getElementById("billModal");
+  const billForm = document.getElementById("billForm");
+  const billNameInput = document.getElementById("billName");
+  const billTypeInput = document.getElementById("billType");
+  const billCategoryInput = document.getElementById("billCategory");
+  const billCurrencyInput = document.getElementById("billCurrency");
+  const billRateInput = document.getElementById("billExchangeRate");
+  const billOriginalAmountInput = document.getElementById("billOriginalAmount");
+  const billAmountHKDInput = document.getElementById("billAmountHKD");
+
+  function updateBillCategoryField() {
+    const isCreditCardStatement =
+      billTypeInput && billTypeInput.value === "Credit Card Payment";
+    const categoryField = document.getElementById("billCategoryField");
+
+    if (categoryField) categoryField.hidden = !!isCreditCardStatement;
+    if (billCategoryInput) billCategoryInput.disabled = !!isCreditCardStatement;
+  }
+
+  function updateBillAmountPreview() {
+    if (!billAmountHKDInput) return;
+
+    const amount = Number(billOriginalAmountInput?.value);
+    const rate = Number(billRateInput?.value);
+    billAmountHKDInput.value =
+      billOriginalAmountInput?.value &&
+      Number.isFinite(amount) &&
+      amount > 0 &&
+      Number.isFinite(rate) &&
+      rate > 0
+        ? (Math.round(amount * rate * 100) / 100).toFixed(2)
+        : "";
+  }
+
+  function updateBillCurrencyRate() {
+    if (!billCurrencyInput || !billRateInput) return;
+    const code = billCurrencyInput.value || "HKD";
+    const currency = getCurrencyByCode(code);
+    billRateInput.value =
+      code === "HKD" ? "1" : String(currency?.rateToHKD || 1);
+    updateBillAmountPreview();
+  }
+
+  function openBillModal() {
+    if (!billModal || !billForm) return;
+
+    billForm.reset();
+
+    const expenseCategories = getUniqueNames(
+      (settings.categories || []).filter((item) => item.type === "Expense"),
+    );
+    populateSelectOptions(billCategoryInput, expenseCategories);
+    populateSelectOptions(
+      document.getElementById("billAccount"),
+      getUniqueNames(settings.accounts || []),
+    );
+    populateSelectOptions(
+      document.getElementById("billPaymentMethod"),
+      getPaymentMethodOptions(),
+    );
+    populateCurrencySelect(billCurrencyInput, "HKD");
+    updateBillCurrencyRate();
+    updateBillCategoryField();
+
+    billModal.classList.add("is-open");
+    billModal.setAttribute("aria-hidden", "false");
+    billNameInput?.focus();
+  }
+
+  function closeBillModal() {
+    if (!billModal) return;
+    billModal.classList.remove("is-open");
+    billModal.setAttribute("aria-hidden", "true");
+    openBillModalBtn?.focus();
+  }
+
+  openBillModalBtn?.addEventListener("click", openBillModal);
+  closeBillModalBtn?.addEventListener("click", closeBillModal);
+  cancelBillModalBtn?.addEventListener("click", closeBillModal);
+  billModal?.addEventListener("click", (event) => {
+    if (event.target === billModal) closeBillModal();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && billModal?.classList.contains("is-open")) {
+      closeBillModal();
+    }
+  });
+  billTypeInput?.addEventListener("change", updateBillCategoryField);
+  billCurrencyInput?.addEventListener("change", updateBillCurrencyRate);
+  billOriginalAmountInput?.addEventListener("input", updateBillAmountPreview);
+  billRateInput?.addEventListener("input", updateBillAmountPreview);
+  billForm?.addEventListener("submit", (event) => event.preventDefault());
 
   const segmentedButtons = document.querySelectorAll(".segmented button");
 

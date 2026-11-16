@@ -4314,3 +4314,120 @@ body.dark-mode .account-summary-item {
 #dashboardCreditCardOutstanding {
   color: #e05252 !important;
 }
+
+/* BILLS TRACKING - PART 1 */
+.bill-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.bill-page-card {
+  min-width: 0;
+}
+
+.bill-list-header {
+  margin-bottom: 12px;
+}
+
+.bill-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.bill-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.bill-table th,
+.bill-table td {
+  padding: 14px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.bill-table th {
+  color: var(--muted);
+  background: #fafafd;
+  font-weight: 800;
+}
+
+.bill-table .bill-empty-row {
+  padding: 30px 16px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.bill-modal-card {
+  max-width: 720px;
+  max-height: 88vh;
+  overflow-y: auto;
+}
+
+#billCategoryField[hidden] {
+  display: none;
+}
+
+#billForm .form-field textarea {
+  width: 100%;
+  min-height: 84px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  background: #ffffff;
+  color: #111827;
+  font: inherit;
+  outline: none;
+}
+
+#billForm .form-field textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.12);
+}
+
+.bill-preview-hint {
+  margin-top: 16px;
+  padding: 10px 12px;
+  background: var(--primary-soft);
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--primary-dark);
+}
+
+#billSubmitBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+body.dark-mode .bill-table th {
+  background: #171827;
+}
+
+body.dark-mode #billForm .form-field textarea {
+  background: #111827;
+  color: #f8fafc;
+  border-color: #383b58;
+}
+
+@media (max-width: 980px) {
+  .bill-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .bill-summary-grid {
+    grid-template-columns: 1fr;
+  }
+  .bill-modal-card {
+    max-height: 92vh;
+    padding: 18px;
+  }
+}

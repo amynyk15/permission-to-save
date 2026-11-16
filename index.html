@@ -6,7 +6,7 @@
     <title>Permission to Save</title>
 
     <link rel="icon" type="image/svg+xml" href="./favicon.svg?v=20260619" />
-    <link rel="stylesheet" href="./style.css?v=20260619-settings-toolbar" />
+    <link rel="stylesheet" href="./style.css?v=20261116-bills-part1" />
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -82,6 +82,11 @@
             <a href="#" class="menu-item" data-target="subscription-tracking">
               <i data-lucide="credit-card"></i>
               Subscription Tracking
+            </a>
+
+            <a href="#" class="menu-item" data-target="bills-tracking">
+              <i data-lucide="file-clock"></i>
+              Bills Tracking
             </a>
 
             <a href="#" class="menu-item" data-target="settings">
@@ -1402,6 +1407,216 @@
             </div>
           </section>
 
+          <!-- BILLS TRACKING PAGE: Part 1 UI only -->
+          <section id="bills-tracking" class="page-section">
+            <div class="page-title page-title-row">
+              <div>
+                <h2>Bills Tracking</h2>
+                <p>Track upcoming bills and payment deadlines in one place.</p>
+              </div>
+              <button class="primary-btn" id="openBillModal" type="button">
+                <i data-lucide="plus"></i>
+                Add Bill
+              </button>
+            </div>
+
+            <section class="bill-summary-grid">
+              <article class="mini-card">
+                <p>Unpaid Bills</p>
+                <h3 class="red" id="billsUnpaidTotal">HK$0</h3>
+              </article>
+              <article class="mini-card">
+                <p>Due Next 7 Days</p>
+                <h3 class="blue" id="billsDueSoonCount">0</h3>
+              </article>
+              <article class="mini-card">
+                <p>Overdue</p>
+                <h3 class="red" id="billsOverdueCount">0</h3>
+              </article>
+              <article class="mini-card">
+                <p>Paid This Month</p>
+                <h3 class="green" id="billsPaidCount">0</h3>
+              </article>
+            </section>
+
+            <section class="card bill-page-card">
+              <div class="card-header bill-list-header">
+                <div>
+                  <h3>Bill List</h3>
+                  <p class="section-note">
+                    Bill saving and payment actions will be enabled in Part 2.
+                  </p>
+                </div>
+              </div>
+
+              <div class="bill-table-scroll">
+                <table class="bill-table">
+                  <thead>
+                    <tr>
+                      <th>Bill</th>
+                      <th>Type</th>
+                      <th>Amount HKD</th>
+                      <th>Due Date</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="billTableBody">
+                    <tr>
+                      <td colspan="6" class="bill-empty-row">
+                        No bills yet. The Add Bill form is a preview in Part 1.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <!-- BILL MODAL: Part 1 preview; no data is saved yet -->
+            <div
+              class="modal-overlay"
+              id="billModal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="billModalTitle"
+              aria-hidden="true"
+            >
+              <div class="modal-card bill-modal-card">
+                <div class="modal-header">
+                  <div>
+                    <h3 id="billModalTitle">Add Bill</h3>
+                    <p>Record a bill and its payment deadline.</p>
+                  </div>
+                  <button
+                    class="icon-btn"
+                    id="closeBillModal"
+                    type="button"
+                    aria-label="Close Add Bill"
+                  >
+                    <i data-lucide="x"></i>
+                  </button>
+                </div>
+
+                <form id="billForm">
+                  <div class="form-grid">
+                    <div class="form-field">
+                      <label for="billName">Bill Name</label>
+                      <input
+                        type="text"
+                        id="billName"
+                        placeholder="e.g. Electricity Bill"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-field">
+                      <label for="billType">Bill Type</label>
+                      <select id="billType" required>
+                        <option value="Expense">Living Expense</option>
+                        <option value="Credit Card Payment">Credit Card Statement</option>
+                      </select>
+                    </div>
+
+                    <div class="form-field" id="billCategoryField">
+                      <label for="billCategory">Category</label>
+                      <select id="billCategory" required></select>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="billOriginalAmount">Original Amount</label>
+                      <input
+                        type="number"
+                        id="billOriginalAmount"
+                        min="0.01"
+                        step="0.01"
+                        placeholder="e.g. 650"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-field">
+                      <label for="billCurrency">Currency</label>
+                      <select id="billCurrency" required></select>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="billExchangeRate">Exchange Rate to HKD</label>
+                      <input
+                        type="number"
+                        id="billExchangeRate"
+                        min="0.000001"
+                        step="0.000001"
+                        value="1"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-field">
+                      <label for="billAmountHKD">Amount HKD</label>
+                      <input type="number" id="billAmountHKD" step="0.01" readonly />
+                    </div>
+
+                    <div class="form-field">
+                      <label for="billDueDate">Due Date</label>
+                      <input type="date" id="billDueDate" required />
+                    </div>
+
+                    <div class="form-field">
+                      <label for="billAccount">Payment Account</label>
+                      <select id="billAccount" required></select>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="billPaymentMethod">Payment Method</label>
+                      <select id="billPaymentMethod" required></select>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="billRecurring">Repeat</label>
+                      <select id="billRecurring">
+                        <option value="None">One-time</option>
+                        <option value="Monthly">Monthly</option>
+                        <option value="Every 2 Months">Every 2 Months</option>
+                        <option value="Quarterly">Quarterly</option>
+                        <option value="Yearly">Yearly</option>
+                      </select>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="billStatus">Status</label>
+                      <select id="billStatus">
+                        <option value="Unpaid">Unpaid</option>
+                        <option value="Paid">Paid</option>
+                      </select>
+                    </div>
+
+                    <div class="form-field full-width">
+                      <label for="billNotes">Notes</label>
+                      <textarea
+                        id="billNotes"
+                        rows="3"
+                        placeholder="Bill period, invoice reference, or other details"
+                      ></textarea>
+                    </div>
+                  </div>
+
+                  <p class="bill-preview-hint" role="status">
+                    Part 1 preview: you can review the fields, but saving will be available in Part 2.
+                  </p>
+
+                  <div class="modal-actions">
+                    <button class="secondary-btn" id="cancelBillModal" type="button">
+                      Cancel
+                    </button>
+                    <button class="primary-btn" id="billSubmitBtn" type="submit" disabled>
+                      Save Bill (Part 2)
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </section>
+
           <!-- SETTINGS PAGE -->
           <section id="settings" class="page-section">
             <div class="page-title">
@@ -2372,6 +2587,6 @@
 
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="script.js"></script>
+    <script src="./script.js?v=20261116-bills-part1"></script>
   </body>
 </html>
