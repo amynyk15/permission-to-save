@@ -6,7 +6,7 @@
     <title>Permission to Save</title>
 
     <link rel="icon" type="image/svg+xml" href="./favicon.svg?v=20260619" />
-    <link rel="stylesheet" href="./style.css?v=20261116-bills-part3" />
+    <link rel="stylesheet" href="./style.css?v=20261116-bills-part4" />
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -1444,7 +1444,7 @@
                 <div>
                   <h3>Bill List</h3>
                   <p class="section-note">
-                    Paid bills can create Transactions. Bills themselves remain local until Cloud Sync Part 4.
+                    Paid bills create Transactions. Sign in to sync Bills to Supabase across devices.
                   </p>
                 </div>
               </div>
@@ -1613,8 +1613,9 @@
                   <p class="bill-preview-hint" role="status">
                     Marking a bill Paid records a completed Expense or Transfer and
                     updates account balances. Mark Unpaid reverses its linked transaction.
-                    Bills remain local to this device until Cloud Sync Part 4.
-                    Repeat is for reference; future bills are not generated automatically yet.
+                    Bills auto-sync to Supabase when signed in. If added offline, use
+                    Upload Bills to Cloud later. Repeat is for reference; future
+                    bills are not generated automatically yet.
                   </p>
 
                   <div class="modal-actions">
@@ -1762,6 +1763,24 @@
                   >
                     <i data-lucide="cloud-download"></i>
                     Load Subscriptions from Cloud
+                  </button>
+
+                  <button
+                    class="primary-btn"
+                    id="uploadBillsCloudBtn"
+                    type="button"
+                  >
+                    <i data-lucide="cloud-upload"></i>
+                    Upload Bills to Cloud
+                  </button>
+
+                  <button
+                    class="secondary-btn"
+                    id="loadBillsCloudBtn"
+                    type="button"
+                  >
+                    <i data-lucide="cloud-download"></i>
+                    Load Bills from Cloud
                   </button>
 
                   <button
@@ -2600,6 +2619,6 @@
 
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="./script.js?v=20261116-bills-part3"></script>
+    <script src="./script.js?v=20261116-bills-part4"></script>
   </body>
 </html>

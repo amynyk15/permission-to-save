@@ -39,6 +39,10 @@ document.addEventListener("DOMContentLoaded", () => {
       : null;
 
   let currentCloudUser = null;
+  // Serializes bill writes so a quick Paid -> Unpaid action cannot re-create
+  // an older cloud row after its delete request has finished.
+  let billCloudWriteQueue = Promise.resolve();
+  let billTransactionCloudWriteQueue = Promise.resolve();
 
   let editingTransactionId = null;
   let editingGoalId = null;
@@ -1163,6 +1167,207 @@ document.addEventListener("DOMContentLoaded", () => {
     updateCloudSyncStatus("Subscription deleted from cloud.");
   }
 
+  // =========================
+  // BILLS TRACKING CLOUD SYNC - PART 4
+  // =========================
+
+  function canAutoSyncBills() {
+    return Boolean(supabaseClient && currentCloudUser);
+  }
+
+  function mapLocalBillToCloudRow(bill) {
+    return {
+      user_id: currentCloudUser.id,
+      local_id: bill.id,
+      name: bill.name,
+      bill_type: bill.type,
+      category: bill.category || null,
+      original_amount: Number(bill.originalAmount),
+      currency: bill.currency || "HKD",
+      exchange_rate: Number(bill.exchangeRate) || 1,
+      amount_hkd: Number(bill.amountHKD),
+      due_date: bill.dueDate,
+      payment_account: bill.account,
+      credit_card_account: bill.creditCardAccount || null,
+      payment_method: bill.paymentMethod || null,
+      recurring: bill.recurring || "None",
+      status: bill.status === "Paid" ? "Paid" : "Unpaid",
+      paid_date: bill.status === "Paid" ? bill.paidDate || null : null,
+      transaction_local_id: bill.transactionId || null,
+      notes: bill.notes || null,
+      created_at: bill.createdAt || new Date().toISOString(),
+      updated_at: bill.updatedAt || new Date().toISOString(),
+    };
+  }
+
+  function mapCloudRowToLocalBill(row) {
+    return {
+      id: row.local_id || row.id,
+      name: row.name,
+      type: row.bill_type,
+      category: row.category || "",
+      originalAmount: Number(row.original_amount),
+      currency: row.currency || "HKD",
+      exchangeRate: Number(row.exchange_rate) || 1,
+      amountHKD: Number(row.amount_hkd),
+      dueDate: row.due_date,
+      account: row.payment_account,
+      creditCardAccount: row.credit_card_account || "",
+      paymentMethod: row.payment_method || "Not specified",
+      recurring: row.recurring || "None",
+      status: row.status === "Paid" ? "Paid" : "Unpaid",
+      paidDate: row.paid_date || "",
+      transactionId: row.transaction_local_id || "",
+      notes: row.notes || "",
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  function queueBillCloudWrite(operation) {
+    billCloudWriteQueue = billCloudWriteQueue.then(operation, operation).catch(
+      (error) => {
+        console.error("Bills cloud write failed:", error);
+        showToast("Bills cloud auto sync failed. Use Upload Bills after login.", "error");
+        updateCloudSyncStatus("Bills auto sync failed.");
+      },
+    );
+    return billCloudWriteQueue;
+  }
+
+  async function upsertBillToCloud(bill) {
+    if (!canAutoSyncBills() || !bill) return;
+    const cloudRow = mapLocalBillToCloudRow(bill);
+
+    return queueBillCloudWrite(async () => {
+      const { error } = await supabaseClient.from("bills")
+        .upsert(cloudRow, { onConflict: "user_id,local_id" });
+      if (error) throw error;
+      updateCloudSyncStatus("Bill auto synced to cloud.");
+    });
+  }
+
+  async function deleteBillFromCloud(billId) {
+    if (!canAutoSyncBills() || !billId) return;
+    const userId = currentCloudUser.id;
+
+    return queueBillCloudWrite(async () => {
+      const { error } = await supabaseClient.from("bills")
+        .delete()
+        .eq("user_id", userId)
+        .eq("local_id", billId);
+      if (error) throw error;
+      updateCloudSyncStatus("Bill deleted from cloud.");
+    });
+  }
+
+  // Upsert first; only remove obsolete cloud rows after all local rows have
+  // been accepted. This avoids deleting the whole cloud table on an insert error.
+  async function replaceCloudBillsFromLocal() {
+    const cloudRows = bills.map(mapLocalBillToCloudRow);
+
+    if (cloudRows.length > 0) {
+      const { error: upsertError } = await supabaseClient.from("bills")
+        .upsert(cloudRows, { onConflict: "user_id,local_id" });
+      if (upsertError) {
+        console.error(upsertError);
+        return false;
+      }
+    }
+
+    const { data: oldRows, error: selectError } = await supabaseClient
+      .from("bills")
+      .select("local_id")
+      .eq("user_id", currentCloudUser.id);
+    if (selectError) {
+      console.error(selectError);
+      return false;
+    }
+
+    const localIds = new Set(bills.map((bill) => bill.id));
+    const obsoleteIds = (oldRows || [])
+      .filter((row) => !localIds.has(row.local_id))
+      .map((row) => row.local_id);
+
+    for (let index = 0; index < obsoleteIds.length; index += 100) {
+      const chunk = obsoleteIds.slice(index, index + 100);
+      const { error: deleteError } = await supabaseClient.from("bills")
+        .delete()
+        .eq("user_id", currentCloudUser.id)
+        .in("local_id", chunk);
+      if (deleteError) {
+        console.error(deleteError);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  async function uploadBillsToCloud() {
+    if (!canUseCloudSync()) return;
+    if (!confirm(
+      `Upload ${bills.length} local bill(s) to cloud?\n\n` +
+      "This will replace your cloud Bills list. Bills on other devices that " +
+      "have not been loaded here may be deleted. Export a JSON backup first.",
+    )) return;
+
+    await billCloudWriteQueue;
+    updateCloudSyncStatus("Uploading bills to cloud...");
+    const success = await replaceCloudBillsFromLocal();
+    if (!success) {
+      showToast("Unable to upload bills. Check Supabase bills table and RLS.", "error");
+      updateCloudSyncStatus("Bills upload failed.");
+      return;
+    }
+
+    showToast("Bills uploaded to cloud successfully.", "success");
+    updateCloudSyncStatus(`${bills.length} bill(s) uploaded to cloud.`);
+  }
+
+  async function loadBillsFromCloud() {
+    if (!canUseCloudSync()) return;
+    if (!confirm(
+      "Load Bills from cloud?\n\nThis will replace the Bills list on this " +
+      "device. It will NOT load Transactions or Settings. Use Load All " +
+      "Data for consistent balances. Export a JSON backup first.",
+    )) return;
+
+    await billCloudWriteQueue;
+    updateCloudSyncStatus("Loading bills from cloud...");
+    const { data, error } = await supabaseClient.from("bills")
+      .select("*")
+      .eq("user_id", currentCloudUser.id)
+      .order("due_date", { ascending: true });
+    if (error) {
+      console.error(error);
+      showToast("Unable to load bills from cloud.", "error");
+      updateCloudSyncStatus("Bills load failed.");
+      return;
+    }
+
+    if (!data.length && bills.length && !confirm(
+      `Cloud Bills is empty. Replace ${bills.length} local bill(s) with an empty list?`,
+    )) {
+      updateCloudSyncStatus("Bills load cancelled; local bills preserved.");
+      return;
+    }
+
+    const previousBills = bills;
+    bills = data.map(mapCloudRowToLocalBill);
+    try {
+      saveBills();
+    } catch (saveError) {
+      bills = previousBills;
+      console.error(saveError);
+      showToast("Unable to save downloaded bills on this device.", "error");
+      return;
+    }
+
+    renderBills();
+    showToast("Bills loaded from cloud. Load Transactions too for balances.", "success");
+    updateCloudSyncStatus(`${bills.length} bill(s) loaded from cloud.`);
+  }
+
   function getSettingsCloudRows() {
     const categoryRows = (settings.categories || []).map((category) => ({
       user_id: currentCloudUser.id,
@@ -1864,6 +2069,11 @@ document.addEventListener("DOMContentLoaded", () => {
         label: "Investments",
         rows: investments.map(mapLocalInvestmentToCloudRow),
       },
+      {
+        tableName: "bills",
+        label: "Bills",
+        rows: bills.map(mapLocalBillToCloudRow),
+      },
     ];
   }
 
@@ -1871,19 +2081,37 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!canUseCloudSync()) return;
 
     const confirmed = confirm(
-      "Upload cloud-enabled local data?\n\nThis will replace existing cloud data for this account. Bills Tracking stays on this device until Cloud Sync Part 4.",
+      "Upload all local data, including Bills, to cloud?\n\n" +
+      "This REPLACES your existing cloud data for this account. " +
+      "Make a JSON backup and load any newer data from other devices first.",
     );
 
     if (!confirmed) return;
 
+    await Promise.all([billCloudWriteQueue, billTransactionCloudWriteQueue]);
+
+    // Check the newly introduced table before modifying any other cloud data.
+    // Without this, a missing Part 4 SQL table could cause a partial Upload All.
+    const { error: billsTableError } = await supabaseClient.from("bills")
+      .select("local_id")
+      .limit(1);
+    if (billsTableError) {
+      console.error(billsTableError);
+      showToast("Bills cloud table unavailable. Run Part 4 SQL first.", "error");
+      updateCloudSyncStatus("Upload All stopped before changes.");
+      return;
+    }
+
     const uploadGroups = getAllCloudUploadGroups();
 
     for (const group of uploadGroups) {
-      const success = await replaceCloudRowsSilently(
-        group.tableName,
-        group.rows,
-        group.label,
-      );
+      const success = group.tableName === "bills"
+        ? await replaceCloudBillsFromLocal()
+        : await replaceCloudRowsSilently(
+          group.tableName,
+          group.rows,
+          group.label,
+        );
 
       if (!success) {
         showToast(`${group.label} upload failed. Upload All stopped.`, "error");
@@ -1936,11 +2164,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!canUseCloudSync()) return;
 
     const confirmed = confirm(
-      "Load cloud-enabled data?\n\nThis will replace cloud-enabled local data on this device. Bills Tracking remains local until Cloud Sync Part 4.",
+      "Load all data from cloud, including Bills?\n\n" +
+      "This will replace all corresponding local data on this device. " +
+      "Export a JSON backup before continuing.",
     );
 
     if (!confirmed) return;
 
+    await Promise.all([billCloudWriteQueue, billTransactionCloudWriteQueue]);
     updateCloudSyncStatus("Loading all data from cloud...");
 
     const [
@@ -1951,6 +2182,7 @@ document.addEventListener("DOMContentLoaded", () => {
       cloudSettings,
       cloudNetWorth,
       cloudInvestments,
+      cloudBills,
     ] = await Promise.all([
       loadCloudRows("transactions"),
       loadCloudRows("budgets"),
@@ -1959,6 +2191,7 @@ document.addEventListener("DOMContentLoaded", () => {
       loadCloudRows("settings_items"),
       loadCloudRows("net_worth_items"),
       loadCloudRows("investment_items"),
+      loadCloudRows("bills"),
     ]);
 
     const failedLoad = [
@@ -1969,11 +2202,21 @@ document.addEventListener("DOMContentLoaded", () => {
       cloudSettings,
       cloudNetWorth,
       cloudInvestments,
+      cloudBills,
     ].find((result) => result.error);
 
     if (failedLoad) {
       showToast("Unable to load all data from cloud.", "error");
       updateCloudSyncStatus("Load All failed.");
+      return;
+    }
+
+    if (!cloudBills.data.length && bills.length && !confirm(
+      `Cloud Bills is empty but this device has ${bills.length} bill(s).\n\n` +
+      "Continuing Load All will remove the local Bills list. " +
+      "Cancel and choose Upload Bills if this device is your main copy.",
+    )) {
+      updateCloudSyncStatus("Load All cancelled; local data preserved.");
       return;
     }
 
@@ -1984,6 +2227,7 @@ document.addEventListener("DOMContentLoaded", () => {
     settings = mapCloudRowsToSettings(cloudSettings.data);
     netWorthItems = cloudNetWorth.data.map(mapCloudRowToLocalNetWorthItem);
     investments = cloudInvestments.data.map(mapCloudRowToLocalInvestment);
+    bills = cloudBills.data.map(mapCloudRowToLocalBill);
 
     saveTransactions();
     saveBudgets();
@@ -1992,6 +2236,7 @@ document.addEventListener("DOMContentLoaded", () => {
     saveSettings();
     saveNetWorthItems();
     saveInvestments();
+    saveBills();
 
     renderAllAppData();
 
@@ -9086,6 +9331,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const uploadSubscriptionsCloudBtn = document.getElementById(
     "uploadSubscriptionsCloudBtn",
   );
+  const uploadBillsCloudBtn = document.getElementById("uploadBillsCloudBtn");
   const uploadSettingsCloudBtn = document.getElementById(
     "uploadSettingsCloudBtn",
   );
@@ -9105,6 +9351,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const loadSubscriptionsCloudBtn = document.getElementById(
     "loadSubscriptionsCloudBtn",
   );
+  const loadBillsCloudBtn = document.getElementById("loadBillsCloudBtn");
   const loadSavingGoalsCloudBtn = document.getElementById(
     "loadSavingGoalsCloudBtn",
   );
@@ -9163,6 +9410,14 @@ document.addEventListener("DOMContentLoaded", () => {
       "click",
       loadSubscriptionsFromCloud,
     );
+  }
+
+  if (uploadBillsCloudBtn) {
+    uploadBillsCloudBtn.addEventListener("click", uploadBillsToCloud);
+  }
+
+  if (loadBillsCloudBtn) {
+    loadBillsCloudBtn.addEventListener("click", loadBillsFromCloud);
   }
 
   if (uploadSettingsCloudBtn) {
@@ -10095,7 +10350,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // BILLS TRACKING - PART 3 (PAYMENT -> TRANSACTIONS)
+  // BILLS TRACKING - PART 4 (PAYMENT + CLOUD SYNC)
   // =========================
 
   const openBillModalBtn = document.getElementById("openBillModal");
@@ -10370,8 +10625,8 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // Keep the two local arrays consistent. Cloud sync is the existing
-  // best-effort per-transaction process, not a cross-table transaction.
+  // Keep the two local arrays consistent. Supabase updates are best-effort;
+  // both entities retain stable local IDs for retry via Upload All.
   function commitBillPaymentChange(nextBills, nextTransactions, effects = {}) {
     const previousBills = bills;
     const previousTransactions = transactions;
@@ -10399,8 +10654,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
     renderBills();
     if (transactionsChanged) renderTransactions();
-    if (effects.upsert) upsertTransactionToCloud(effects.upsert);
-    if (effects.deleteId) deleteTransactionFromCloud(effects.deleteId);
+    // Payment edits may be made quickly. Preserve request order for linked
+    // Transactions, just as we preserve it for Bills.
+    if (effects.upsert || effects.deleteId) {
+      const transactionToUpsert = effects.upsert;
+      const transactionToDelete = effects.deleteId;
+      billTransactionCloudWriteQueue = billTransactionCloudWriteQueue
+        .then(async () => {
+          if (transactionToUpsert) {
+            await upsertTransactionToCloud(transactionToUpsert);
+          }
+          if (transactionToDelete) {
+            await deleteTransactionFromCloud(transactionToDelete);
+          }
+        })
+        .catch((error) => {
+          console.error("Linked transaction cloud write failed:", error);
+          showToast("Linked Transaction cloud sync failed.", "error");
+        });
+    }
+    if (effects.billUpsert) upsertBillToCloud(effects.billUpsert);
+    if (effects.billDeleteId) deleteBillFromCloud(effects.billDeleteId);
     return true;
   }
 
@@ -10633,7 +10907,10 @@ document.addEventListener("DOMContentLoaded", () => {
       ? bills.map((item) => item.id === bill.id ? plan.bill : item)
       : [...bills, plan.bill];
 
-    const saved = commitBillPaymentChange(nextBills, plan.transactions, plan);
+    const saved = commitBillPaymentChange(nextBills, plan.transactions, {
+      ...plan,
+      billUpsert: plan.bill,
+    });
     if (!saved) return;
 
     closeBillModal();
@@ -10689,7 +10966,10 @@ document.addEventListener("DOMContentLoaded", () => {
     )) return;
 
     const nextBills = bills.map((item) => item.id === billId ? plan.bill : item);
-    const saved = commitBillPaymentChange(nextBills, plan.transactions, plan);
+    const saved = commitBillPaymentChange(nextBills, plan.transactions, {
+      ...plan,
+      billUpsert: plan.bill,
+    });
     if (!saved) return;
 
     showToast(nextStatus === "Paid"
@@ -10728,7 +11008,10 @@ document.addEventListener("DOMContentLoaded", () => {
     )) return;
 
     const nextBills = bills.map((item) => item.id === billId ? plan.bill : item);
-    if (commitBillPaymentChange(nextBills, plan.transactions, plan)) {
+    if (commitBillPaymentChange(nextBills, plan.transactions, {
+      ...plan,
+      billUpsert: plan.bill,
+    })) {
       showToast("Existing Paid bill linked to a completed Transaction.", "success");
     }
   }
@@ -10750,6 +11033,7 @@ document.addEventListener("DOMContentLoaded", () => {
       : transactions;
     const saved = commitBillPaymentChange(nextBills, nextTransactions, {
       deleteId: linkedTransaction?.id,
+      billDeleteId: bill.id,
     });
     if (saved) showToast("Bill and any linked Transaction deleted.", "success");
   }
